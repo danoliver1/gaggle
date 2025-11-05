@@ -1,0 +1,99 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gaggle"
+dynamic = ["version"]
+description = "AI-Powered Agile Development Team"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Dan Oliver", email = "dan@example.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.10"
+dependencies = [
+    # Data models and validation
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    
+    # CLI and configuration
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    "click>=8.1.0",
+    
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "structlog>=24.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.1.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.12.0",
+    
+    # Code quality
+    "ruff>=0.3.0",
+    "black>=24.2.0",
+    "mypy>=1.9.0",
+]
+
+api = [
+    # API framework (optional)
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "gunicorn>=21.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/danoliver1/gaggle"
+Documentation = "https://gaggle.readthedocs.io"
+Repository = "https://github.com/danoliver1/gaggle"
+Issues = "https://github.com/danoliver1/gaggle/issues"
+
+[project.scripts]
+gaggle = "gaggle.main:app"
+
+[tool.hatch.version]
+path = "src/gaggle/__init__.py"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+select = ["E", "F", "I", "N", "W", "B", "C4", "UP", "SIM"]
+ignore = ["E501", "W503"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=src/gaggle --cov-report=html --cov-report=term-missing"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]
