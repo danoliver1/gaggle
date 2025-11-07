@@ -6,13 +6,23 @@ from typing import Any, Dict, List, Optional, Type
 from datetime import datetime
 import structlog
 
-from strands import Agent
-from strands.models import BedrockModel, AnthropicModel
+# Conditional imports for Strands framework
+try:
+    from strands import Agent
+    from strands.models import BedrockModel, AnthropicModel
+    STRANDS_AVAILABLE = True
+except ImportError:
+    # Mock implementation for development
+    STRANDS_AVAILABLE = False
+    Agent = None
+    BedrockModel = None
+    AnthropicModel = None
 
 from ..config.models import AgentRole, ModelConfig, get_model_config
 from ..config.settings import settings
 from ..utils.logging import get_logger
 from ..utils.token_counter import TokenCounter
+from ..integrations.strands_adapter import strands_adapter
 
 
 class AgentContext:
@@ -54,7 +64,7 @@ class BaseAgent(ABC):
         # Get model configuration for this role
         self.model_config = get_model_config(role)
         
-        # Initialize the underlying Strands agent
+        # Initialize the underlying Strands agent using adapter
         self._agent = self._create_strands_agent()
         
         # Tools available to this agent
@@ -78,29 +88,14 @@ class BaseAgent(ABC):
         }
         return role_names.get(self.role, "Agent")
     
-    def _create_strands_agent(self) -> Agent:
-        """Create the underlying Strands agent with appropriate model."""
-        # Choose model provider based on configuration
-        if settings.anthropic_api_key:
-            model = AnthropicModel(
-                model_id=self.model_config.model_id,
-                api_key=settings.anthropic_api_key,
-                max_tokens=self.model_config.max_tokens,
-                temperature=self.model_config.temperature,
-            )
-        else:
-            model = BedrockModel(
-                model_id=self.model_config.model_id,
-                region=settings.aws_region,
-                max_tokens=self.model_config.max_tokens,
-                temperature=self.model_config.temperature,
-            )
-        
-        return Agent(
+    def _create_strands_agent(self) -> Any:
+        """Create the underlying Strands agent using the adapter."""
+        return strands_adapter.create_agent(
             name=self.name,
-            model=model,
+            role=self.role,
             instruction=self._get_instruction(),
             tools=self._get_tools(),
+            context={"agent_context": self.context}
         )
     
     @abstractmethod

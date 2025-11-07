@@ -2,16 +2,57 @@
 
 from typing import Dict, List, Any, Optional
 from .project_tools import BaseTool
+from ..integrations.github_api import GitHubAPIClient
 
 
 class GitHubTool(BaseTool):
-    """Tool for GitHub integration operations."""
+    """Tool for GitHub integration operations with real API support."""
     
-    def __init__(self):
+    def __init__(self, use_real_api: bool = True):
         super().__init__("github_tool")
+        self.use_real_api = use_real_api
     
     async def execute(self, action: str, **kwargs) -> Dict[str, Any]:
         """Execute GitHub operations."""
+        if self.use_real_api:
+            return await self._execute_real_api(action, **kwargs)
+        else:
+            return await self._execute_mock_api(action, **kwargs)
+    
+    async def _execute_real_api(self, action: str, **kwargs) -> Dict[str, Any]:
+        """Execute GitHub operations using real API."""
+        async with GitHubAPIClient() as github:
+            if action == "create_issue":
+                user_story = kwargs.get("user_story")
+                if user_story:
+                    return await github.create_user_story_issue(user_story)
+                else:
+                    return {"error": "User story required for issue creation"}
+            elif action == "create_task_issue":
+                task = kwargs.get("task")
+                if task:
+                    return await github.create_task_issue(task)
+                else:
+                    return {"error": "Task required for task issue creation"}
+            elif action == "create_pr":
+                pr_data = kwargs.get("pr_data", {})
+                return await github.create_pull_request(**pr_data)
+            elif action == "sync_sprint":
+                sprint = kwargs.get("sprint")
+                if sprint:
+                    return await github.sync_sprint_with_github(sprint)
+                else:
+                    return {"error": "Sprint required for sync"}
+            elif action == "get_repository_insights":
+                return await github.get_repository_insights()
+            elif action == "create_project_board":
+                board_data = kwargs.get("board_data", {})
+                return await github.create_project_board(**board_data)
+            else:
+                return {"error": f"Unknown action: {action}"}
+    
+    async def _execute_mock_api(self, action: str, **kwargs) -> Dict[str, Any]:
+        """Execute GitHub operations using mock API (for testing)."""
         if action == "create_issue":
             return await self.create_issue(kwargs.get("issue_data"))
         elif action == "create_pr":

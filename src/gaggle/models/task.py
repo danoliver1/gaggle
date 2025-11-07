@@ -78,6 +78,14 @@ class Task(BaseModel):
     dependencies: List[TaskDependency] = Field(default_factory=list)
     blocks: List[str] = Field(default_factory=list, description="Task IDs that this task blocks")
     
+    # Additional fields used by agents
+    user_story_id: Optional[str] = None
+    blocked: bool = False
+    reviewed: bool = False
+    review_status: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    
     # Blocking information
     blocker_reason: Optional[str] = None
     blocked_at: Optional[datetime] = None
@@ -341,3 +349,7 @@ class Task(BaseModel):
             "labels": labels,
             "assignees": [self.assigned_to] if self.assigned_to else [],
         }
+
+
+# Alias for compatibility with existing code
+TaskModel = Task
