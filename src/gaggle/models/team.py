@@ -108,14 +108,14 @@ class TeamMember(BaseModel):
         return {
             "member_id": self.id,
             "name": self.name,
-            "role": self.role.value,
+            "role": self.role,  # Already a string due to use_enum_values = True
             "tasks_completed": self.tasks_completed,
             "total_tokens_used": self.total_tokens_used,
             "total_cost": self.total_cost,
             "avg_tokens_per_task": avg_tokens_per_task,
             "avg_cost_per_task": avg_cost_per_task,
-            "status": self.status.value,
-            "model_tier": self.model_tier.value,
+            "status": self.status,  # Already a string due to use_enum_values = True
+            "model_tier": self.model_tier,  # Already a string due to use_enum_values = True
         }
 
 

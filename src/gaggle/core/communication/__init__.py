@@ -1,6 +1,6 @@
 """Structured communication system for agent coordination."""
 
-from .bus import MessageBus, MessageRouter
+from .bus import MessageBus, MessageRouter, MessageHandler
 from .messages import (
     AgentMessage,
     CodeReviewMessage,
@@ -26,4 +26,5 @@ __all__ = [
     "ProtocolValidator",
     "MessageBus",
     "MessageRouter",
+    "MessageHandler",
 ]
