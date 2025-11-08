@@ -37,6 +37,14 @@ class TaskComplexity(str, Enum):
     HIGH = "high"
 
 
+class TaskPriority(str, Enum):
+    """Task priority levels."""
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class TaskDependency(BaseModel):
     """Task dependency relationship."""
     task_id: str = Field(..., description="ID of the dependent task")

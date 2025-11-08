@@ -27,11 +27,10 @@ async def test_basic_agent_functionality():
         
         # Test a simple task
         result = await po.create_user_stories(
-            features=["User login", "User dashboard"],
-            project_context={"domain": "web app", "users": "customers"}
+            product_idea="Web application with user login and dashboard for customers"
         )
         print(f"✅ Product Owner executed task successfully")
-        print(f"   Stories created: {len(result.get('user_stories', []))}")
+        print(f"   Stories created: {len(result) if result else 0}")
         
     except Exception as e:
         print(f"❌ Product Owner test failed: {e}")
@@ -44,13 +43,12 @@ async def test_basic_agent_functionality():
         print(f"✅ Scrum Master created: {sm.name} ({sm.role.value})")
         
         # Test planning functionality
-        from gaggle.models.sprint import UserStory
+        from gaggle.models.story import UserStory, StoryPriority
         sample_story = UserStory(
             id="US-001",
             title="User Login",
             description="User authentication feature",
-            acceptance_criteria=["Valid login", "Error handling"],
-            priority="high",
+            priority=StoryPriority.HIGH,
             story_points=5
         )
         
@@ -119,7 +117,9 @@ async def test_models():
     print("\n📊 Testing Data Models...")
     
     try:
-        from gaggle.models.sprint import Sprint, UserStory, Task, TaskStatus
+        from gaggle.models.sprint import Sprint
+        from gaggle.models.story import UserStory, AcceptanceCriteria, StoryPriority
+        from gaggle.models.task import Task, TaskStatus, TaskType
         from datetime import datetime, timedelta
         
         # Create a task
@@ -127,10 +127,21 @@ async def test_models():
             id="TASK-001",
             title="Implement login form",
             description="Create React login component",
+            task_type=TaskType.FRONTEND,
             status=TaskStatus.TODO,
             assigned_to="frontend_dev",
             estimated_hours=4,
-            user_story_id="US-001"
+            story_id="US-001"
+        )
+        
+        # Create acceptance criteria
+        ac1 = AcceptanceCriteria(
+            id="AC-001",
+            description="User can enter valid credentials and login"
+        )
+        ac2 = AcceptanceCriteria(
+            id="AC-002", 
+            description="System shows error for invalid credentials"
         )
         
         # Create a user story
@@ -138,27 +149,22 @@ async def test_models():
             id="US-001",
             title="User Authentication",
             description="User login functionality",
-            acceptance_criteria=["Valid login", "Error handling"],
-            priority="high",
-            story_points=5,
-            tasks=[task]
+            acceptance_criteria=[ac1, ac2],
+            priority=StoryPriority.HIGH,
+            story_points=5
         )
         
         # Create a sprint
         sprint = Sprint(
             id="SPRINT-001",
-            name="Auth Sprint",
             goal="Implement authentication",
-            start_date=datetime.now(),
-            end_date=datetime.now() + timedelta(weeks=2),
-            user_stories=[story],
-            team_velocity=20
+            user_stories=[story]
         )
         
         print(f"✅ Models working:")
-        print(f"   Sprint: {sprint.name} with {len(sprint.user_stories)} stories")
-        print(f"   Story: {story.title} with {len(story.tasks)} tasks")
-        print(f"   Task: {task.title} ({task.status.value})")
+        print(f"   Sprint: {sprint.goal} with {len(sprint.user_stories)} stories")
+        print(f"   Story: {story.title} with {len(story.acceptance_criteria)} acceptance criteria")
+        print(f"   Task: {task.title} ({task.status})")
         
         return True
         

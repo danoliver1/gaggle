@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
 from datetime import datetime
 import structlog
+import uuid
 
 # Conditional imports for Strands framework
 try:
@@ -23,6 +24,8 @@ from ..config.settings import settings
 from ..utils.logging import get_logger
 from ..utils.token_counter import TokenCounter
 from ..integrations.strands_adapter import strands_adapter
+from ..core.communication import MessageBus, MessageHandler, AgentMessage, MessageType
+from ..core.state import AgentStateMachine, ContextManager, AgentContext as NewAgentContext
 
 
 class AgentContext:
@@ -48,16 +51,19 @@ class AgentContext:
 
 
 class BaseAgent(ABC):
-    """Base class for all Gaggle agents."""
+    """Base class for all Gaggle agents with structured communication support."""
     
     def __init__(
         self,
         role: AgentRole,
         name: Optional[str] = None,
         context: Optional[AgentContext] = None,
+        message_bus: Optional[MessageBus] = None,
+        context_manager: Optional[ContextManager] = None,
     ):
         self.role = role
         self.name = name or self._get_default_name()
+        self.agent_id = str(uuid.uuid4())
         self.context = context
         self.logger = get_logger(self.name)
         
@@ -70,10 +76,42 @@ class BaseAgent(ABC):
         # Tools available to this agent
         self.tools = self._get_tools()
         
+        # Structured communication setup
+        self.message_bus = message_bus
+        self.context_manager = context_manager or ContextManager()
+        self.agent_context = self.context_manager.get_or_create_context(role, self.agent_id)
+        
+        # State machine for context-aware coordination
+        self.state_machine: Optional[AgentStateMachine] = self._create_state_machine()
+        
+        # Message handling
+        self.message_handlers: List[MessageHandler] = []
+        self._setup_message_handlers()
+        
         # Performance metrics
         self.task_count = 0
         self.total_tokens_used = 0
         self.total_cost = 0.0
+        
+        # Initialize communication if message bus is available
+        if self.message_bus:
+            self._register_with_message_bus()
+    
+    def _create_state_machine(self) -> Optional[AgentStateMachine]:
+        """Create state machine for this agent type."""
+        # This will be overridden by specific agent classes
+        return None
+    
+    def _setup_message_handlers(self) -> None:
+        """Setup message handlers for this agent."""
+        # Base implementation - to be extended by specific agents
+        pass
+    
+    def _register_with_message_bus(self) -> None:
+        """Register message handlers with the message bus."""
+        if self.message_bus:
+            for handler in self.message_handlers:
+                self.message_bus.register_handler(handler)
     
     def _get_default_name(self) -> str:
         """Get default name based on role."""
@@ -117,6 +155,14 @@ class BaseAgent(ABC):
             task=task[:100] + "..." if len(task) > 100 else task,
         )
         
+        # Update state machine if available
+        if self.state_machine:
+            self.state_machine.transition_to(
+                self.state_machine.current_state,  # Stay in current state or transition as needed
+                "task_started",
+                {"task": task}
+            )
+        
         try:
             # Execute the task using the Strands agent
             result = await self._agent.aexecute(task, **kwargs)
@@ -126,6 +172,14 @@ class BaseAgent(ABC):
                 self._track_token_usage(result.token_usage)
             
             self.task_count += 1
+            
+            # Update state machine on completion
+            if self.state_machine:
+                self.state_machine.transition_to(
+                    self.state_machine.current_state,
+                    "task_completed",
+                    {"task": task, "result": result}
+                )
             
             self.logger.info(
                 "agent_task_complete",
@@ -145,6 +199,14 @@ class BaseAgent(ABC):
             }
             
         except Exception as e:
+            # Update state machine on error
+            if self.state_machine:
+                self.state_machine.transition_to(
+                    self.state_machine.current_state,
+                    "error_occurred",
+                    {"error": str(e), "task": task}
+                )
+            
             self.logger.error(
                 "agent_task_error",
                 agent=self.name,
@@ -153,6 +215,50 @@ class BaseAgent(ABC):
                 task=task[:100] + "..." if len(task) > 100 else task,
             )
             raise
+    
+    async def send_message(self, message: AgentMessage) -> bool:
+        """Send a message through the message bus."""
+        if not self.message_bus:
+            self.logger.warning("No message bus available for sending message")
+            return False
+        
+        validation = await self.message_bus.send_message(message)
+        
+        if not validation.is_valid:
+            self.logger.warning(
+                f"Message validation failed: {validation.errors}",
+                message_id=message.id,
+                message_type=message.message_type.value
+            )
+        
+        return validation.is_valid
+    
+    async def handle_message(self, message: AgentMessage) -> None:
+        """Handle an incoming message."""
+        self.logger.debug(
+            f"Received message: {message.message_type.value}",
+            message_id=message.id,
+            sender=message.sender.value
+        )
+        
+        # Check if agent can handle this message in current state
+        if self.state_machine and not self.state_machine.can_handle_message(message):
+            self.logger.warning(
+                f"Cannot handle message in current state: {self.state_machine.current_state.value}",
+                message_type=message.message_type.value
+            )
+            return
+        
+        # Store current message for context
+        self.state_machine.current_message = message if self.state_machine else None
+        
+        # Process message based on type
+        await self._process_message(message)
+    
+    @abstractmethod
+    async def _process_message(self, message: AgentMessage) -> None:
+        """Process a specific message type. To be implemented by specific agents."""
+        pass
     
     def _track_token_usage(self, token_usage: Dict[str, int]) -> None:
         """Track token usage and calculate costs."""
@@ -174,8 +280,9 @@ class BaseAgent(ABC):
     
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get performance metrics for this agent."""
-        return {
+        metrics = {
             "agent": self.name,
+            "agent_id": self.agent_id,
             "role": self.role.value,
             "task_count": self.task_count,
             "total_tokens_used": self.total_tokens_used,
@@ -187,6 +294,12 @@ class BaseAgent(ABC):
                 self.total_cost / self.task_count if self.task_count > 0 else 0
             ),
         }
+        
+        # Add state machine info if available
+        if self.state_machine:
+            metrics.update(self.state_machine.get_state_info())
+        
+        return metrics
 
 
 class CoordinationAgent(BaseAgent):

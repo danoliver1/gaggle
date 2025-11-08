@@ -233,3 +233,6 @@ class SprintModel(BaseModel):
 
 # Import needed for validator
 from datetime import timedelta
+
+# Alias for convenience
+Sprint = SprintModel

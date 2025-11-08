@@ -103,14 +103,93 @@ Gaggle integrates deeply with GitHub for real development workflows:
 ## Important Files
 
 - `example.py`: Reference implementation showing the multi-agent architecture (DO NOT MODIFY)
-- `ARCHITECTURE.md`: Comprehensive production architecture documentation
+- `ARCHITECTURE.md`: Comprehensive production architecture documentation with implementation status
+- `ROADMAP.md`: Research-driven implementation plan with Phase 1-2 completed, Phase 3 in progress
 - `RESEARCH.md`: Research foundation and performance metrics (36% improvement from parallelization)
-- `README.md`: Project overview and philosophy
+- `README.md`: Project overview and philosophy with current achievements
 
 ## Development Notes
 
-- The project is currently in development - the `src/` structure from ARCHITECTURE.md is planned but not yet implemented
+- The project has **Phase 1 (Structured Communication) and Phase 2 (Hierarchical Memory) implemented and tested**
+- **Phase 3 (Advanced Coordination Features)** is the next implementation target - see `ROADMAP.md` for details
 - Token efficiency is critical - always consider model tier assignments and reusable component strategies
 - Parallel execution is a core design principle - use async patterns throughout
 - All agents should have clear separation of concerns and specialized tool sets
 - Follow the Agile ceremony structure when implementing sprint workflows
+- **Reference `ARCHITECTURE.md`** for detailed implementation status and file locations
+- **Follow `ROADMAP.md`** for the research-driven implementation plan and success metrics
+
+## Testing and Verification Requirements
+
+**CRITICAL:** All code must be tested before claiming it works. Follow this verification process:
+
+### Verification Steps for New Code
+
+1. **Test Imports First**
+   ```bash
+   uv run python -c "from module.path import ClassName; print('Import successful')"
+   ```
+
+2. **Test Basic Functionality**
+   ```bash
+   uv run python simple_test.py  # Run basic functionality tests
+   ```
+
+3. **Test With Real Dependencies** (when available)
+   ```bash
+   # Set up real credentials
+   export ANTHROPIC_API_KEY=your_key
+   export GITHUB_TOKEN=your_token
+   uv run python test_functionality.py
+   ```
+
+4. **Run Full Test Suite**
+   ```bash
+   uv run pytest tests/ -v
+   ```
+
+### Never Claim "Fully Functional" Without Testing
+
+- ✅ **Say "Architecture Implemented"** when code structure is complete
+- ✅ **Say "Proof of Concept Working"** when basic functionality is verified  
+- ❌ **Never say "Production Ready"** without end-to-end testing with real services
+- ❌ **Never say "Fully Functional"** without comprehensive testing
+
+### Current Status Guidelines
+
+- **Phase 1 (Structured Communication):** ✅ Fully implemented and tested (Message schemas, Agent state machines, Communication bus)
+- **Phase 2 (Hierarchical Memory):** ✅ Fully implemented and tested (Multi-level memory, Context retrieval, Prompt caching)
+- **Core Models:** ✅ Verified working (Sprint, UserStory, Task)
+- **Agent Framework:** ✅ Basic creation and imports working
+- **LLM Integration:** 🚧 Requires real credentials for testing
+- **GitHub Integration:** 🚧 Requires real API tokens for testing  
+- **End-to-End Workflows:** ❌ Not tested with real services
+
+## Documentation Maintenance Requirements
+
+**CRITICAL:** All documentation files must be kept up-to-date with implementation progress:
+
+### Documentation Update Responsibilities
+
+When making code changes, **always update these files accordingly**:
+
+1. **ARCHITECTURE.md** - Update implementation status sections when features are completed
+2. **ROADMAP.md** - Mark phases and components as completed with measured achievements  
+3. **README.md** - Update feature status and performance metrics as they're achieved
+4. **CLAUDE.md** - Update current status guidelines and development notes
+
+### Documentation Update Triggers
+
+Update documentation when:
+- ✅ **New features implemented** - Update all four files with status changes
+- ✅ **Tests pass** - Mark features as "tested and working" 
+- ✅ **Performance metrics achieved** - Update with measured improvements
+- ✅ **Architecture changes** - Document new patterns and structures
+- ✅ **Research insights applied** - Update with evidence-based improvements
+
+### Documentation Quality Standards
+
+- **Specific over Generic**: Use exact percentages, file paths, and achievement metrics
+- **Evidence-Based Claims**: Only claim "working" or "production-ready" with test evidence
+- **Research Integration**: Reference specific research insights and measured outcomes
+- **Status Accuracy**: Clearly distinguish between "implemented", "tested", and "production-ready"
