@@ -1,15 +1,15 @@
 """Domain models for Gaggle."""
 
-from .sprint import SprintModel, SprintStatus, SprintMetrics, Sprint
-from .story import UserStory, StoryStatus, AcceptanceCriteria
-from .task import Task, TaskStatus, TaskType, TaskDependency
-from .team import TeamMember, TeamConfiguration, AgentAssignment
-from .github import GitHubRepository, PullRequest, Issue, ProjectBoard
+from .github import GitHubRepository, Issue, ProjectBoard, PullRequest
+from .sprint import Sprint, SprintMetrics, SprintModel, SprintStatus
+from .story import AcceptanceCriteria, StoryStatus, UserStory
+from .task import Task, TaskDependency, TaskStatus, TaskType
+from .team import AgentAssignment, TeamConfiguration, TeamMember
 
 __all__ = [
     "SprintModel",
     "Sprint",
-    "SprintStatus", 
+    "SprintStatus",
     "SprintMetrics",
     "UserStory",
     "StoryStatus",

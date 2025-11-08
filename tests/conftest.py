@@ -1,15 +1,15 @@
 """Pytest configuration and shared fixtures for Gaggle tests."""
 
-import pytest
 import asyncio
-import tempfile
 import os
-from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, timedelta
 
+import pytest
+
 # Import models for fixtures
-from src.gaggle.models.sprint import Sprint, UserStory, Task, TaskStatus
-from src.gaggle.config.models import AgentRole, ModelTier
+from gaggle.models.sprint import Sprint
+from gaggle.models.task import Task, TaskStatus, TaskType
+from gaggle.models.story import UserStory, AcceptanceCriteria
 
 
 # Test environment setup
@@ -37,28 +37,29 @@ def sample_task():
         id="TASK-001",
         title="Implement user authentication",
         description="Create secure user authentication system",
+        task_type=TaskType.BACKEND,
         status=TaskStatus.TODO,
         assigned_to="backend_developer",
-        estimated_hours=6,
-        priority="high",
-        user_story_id="US-001"
+        estimated_hours=6.0,
+        story_id="US-001",
     )
 
 
 @pytest.fixture
 def sample_user_story():
     """Create a sample user story for testing."""
-    return UserStory(
+    story = UserStory(
         id="US-001",
         title="User Authentication",
         description="As a user, I want to authenticate securely",
-        acceptance_criteria=[
-            "User can register with email and password",
-            "User can login with valid credentials"
-        ],
-        priority="high",
-        story_points=8
+        story_points=8,
     )
+    
+    # Add acceptance criteria using the model method
+    story.add_acceptance_criteria("User can register with email and password")
+    story.add_acceptance_criteria("User can login with valid credentials")
+    
+    return story
 
 
 @pytest.fixture
@@ -71,5 +72,5 @@ def sample_sprint(sample_user_story):
         start_date=datetime.now(),
         end_date=datetime.now() + timedelta(weeks=2),
         user_stories=[sample_user_story],
-        team_velocity=25
+        team_velocity=25,
     )

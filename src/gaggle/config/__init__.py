@@ -1,6 +1,6 @@
 """Configuration management for Gaggle."""
 
-from .settings import GaggleSettings
 from .models import ModelConfig, get_model_config
+from .settings import GaggleSettings
 
 __all__ = ["GaggleSettings", "ModelConfig", "get_model_config"]

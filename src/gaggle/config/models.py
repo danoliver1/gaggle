@@ -1,19 +1,21 @@
 """Model configuration for different agent roles."""
 
 from enum import Enum
-from typing import Dict, Any
+
 from pydantic import BaseModel
 
 
 class ModelTier(str, Enum):
     """Model tiers for different agent roles."""
-    HAIKU = "haiku"    # Coordination & facilitation
-    SONNET = "sonnet"  # Implementation & testing  
-    OPUS = "opus"      # Architecture & review
+
+    HAIKU = "haiku"  # Coordination & facilitation
+    SONNET = "sonnet"  # Implementation & testing
+    OPUS = "opus"  # Architecture & review
 
 
 class AgentRole(str, Enum):
     """Agent roles in the Scrum team."""
+
     PRODUCT_OWNER = "product_owner"
     SCRUM_MASTER = "scrum_master"
     TECH_LEAD = "tech_lead"
@@ -25,6 +27,7 @@ class AgentRole(str, Enum):
 
 class ModelConfig(BaseModel):
     """Configuration for a specific model."""
+
     tier: ModelTier
     model_id: str
     max_tokens: int = 4096
@@ -34,25 +37,22 @@ class ModelConfig(BaseModel):
 
 
 # Model tier to agent role mapping
-ROLE_TO_TIER: Dict[AgentRole, ModelTier] = {
+ROLE_TO_TIER: dict[AgentRole, ModelTier] = {
     # Coordination Layer (Cheap - Haiku)
     AgentRole.PRODUCT_OWNER: ModelTier.HAIKU,
     AgentRole.SCRUM_MASTER: ModelTier.HAIKU,
-    
     # Architecture & Review Layer (Expensive - Opus)
     AgentRole.TECH_LEAD: ModelTier.OPUS,
-    
     # Implementation Layer (Mid-tier - Sonnet)
     AgentRole.FRONTEND_DEV: ModelTier.SONNET,
     AgentRole.BACKEND_DEV: ModelTier.SONNET,
     AgentRole.FULLSTACK_DEV: ModelTier.SONNET,
-    
     # Quality Assurance Layer (Mid-tier - Sonnet)
     AgentRole.QA_ENGINEER: ModelTier.SONNET,
 }
 
 # Default model configurations
-DEFAULT_MODEL_CONFIGS: Dict[ModelTier, ModelConfig] = {
+DEFAULT_MODEL_CONFIGS: dict[ModelTier, ModelConfig] = {
     ModelTier.HAIKU: ModelConfig(
         tier=ModelTier.HAIKU,
         model_id="claude-3-haiku-20240307",

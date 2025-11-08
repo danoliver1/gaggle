@@ -1,11 +1,12 @@
 """Production GitHub API integration for Gaggle."""
 
 import asyncio
-import aiohttp
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
-import structlog
 import json
+from datetime import datetime, timedelta
+from typing import Any
+
+import aiohttp
+import structlog
 
 from ..config.settings import settings
 from ..models.sprint import SprintModel
@@ -13,105 +14,104 @@ from ..models.story import UserStory
 from ..models.task import TaskModel
 from ..utils.logging import get_logger
 
-
 logger = structlog.get_logger(__name__)
 
 
 class GitHubAPIClient:
     """Production GitHub API client with full GitHub integration."""
-    
-    def __init__(self, token: Optional[str] = None, repo: Optional[str] = None):
+
+    def __init__(self, token: str | None = None, repo: str | None = None):
         self.token = token or settings.github_token
         self.repo = repo or settings.github_repo
         self.base_url = "https://api.github.com"
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
         self.logger = get_logger("github_api")
-        
+
         if not self.token:
             raise ValueError("GitHub token is required for API integration")
         if not self.repo:
             raise ValueError("GitHub repository is required for API integration")
-    
+
     async def __aenter__(self):
         """Async context manager entry."""
         self.session = aiohttp.ClientSession(
             headers={
                 "Authorization": f"Bearer {self.token}",
                 "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "Gaggle-AI-Team/1.0"
+                "User-Agent": "Gaggle-AI-Team/1.0",
             },
-            timeout=aiohttp.ClientTimeout(total=30)
+            timeout=aiohttp.ClientTimeout(total=30),
         )
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         if self.session:
             await self.session.close()
-    
+
     async def _make_request(
-        self, 
-        method: str, 
-        endpoint: str, 
-        data: Optional[Dict] = None,
-        params: Optional[Dict] = None
-    ) -> Dict[str, Any]:
+        self,
+        method: str,
+        endpoint: str,
+        data: dict | None = None,
+        params: dict | None = None,
+    ) -> dict[str, Any]:
         """Make authenticated GitHub API request."""
-        
+
         if not self.session:
-            raise RuntimeError("GitHub API client not initialized. Use async context manager.")
-        
+            raise RuntimeError(
+                "GitHub API client not initialized. Use async context manager."
+            )
+
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        
+
         try:
             async with self.session.request(
-                method=method,
-                url=url,
-                json=data,
-                params=params
+                method=method, url=url, json=data, params=params
             ) as response:
-                
+
                 # Handle rate limiting
-                if response.status == 403 and "rate limit" in (await response.text()).lower():
+                if (
+                    response.status == 403
+                    and "rate limit" in (await response.text()).lower()
+                ):
                     reset_time = int(response.headers.get("X-RateLimit-Reset", 0))
                     wait_time = max(0, reset_time - int(datetime.now().timestamp()))
-                    
+
                     self.logger.warning(
-                        "github_rate_limit_hit",
-                        wait_time=wait_time,
-                        endpoint=endpoint
+                        "github_rate_limit_hit", wait_time=wait_time, endpoint=endpoint
                     )
-                    
+
                     if wait_time > 0 and wait_time < 3600:  # Wait up to 1 hour
                         await asyncio.sleep(wait_time)
                         return await self._make_request(method, endpoint, data, params)
-                
+
                 # Raise for other HTTP errors
                 response.raise_for_status()
-                
+
                 result = await response.json()
-                
+
                 self.logger.info(
                     "github_api_request_success",
                     method=method,
                     endpoint=endpoint,
-                    status=response.status
+                    status=response.status,
                 )
-                
+
                 return result
-                
+
         except aiohttp.ClientError as e:
             self.logger.error(
                 "github_api_request_failed",
                 method=method,
                 endpoint=endpoint,
-                error=str(e)
+                error=str(e),
             )
             raise
-    
-    async def create_sprint_milestone(self, sprint: SprintModel) -> Dict[str, Any]:
+
+    async def create_sprint_milestone(self, sprint: SprintModel) -> dict[str, Any]:
         """Create a GitHub milestone for the sprint."""
-        
+
         milestone_data = {
             "title": f"Sprint {sprint.id}: {sprint.goal}",
             "description": f"""
@@ -126,39 +126,43 @@ Total Tasks: {len(sprint.tasks)}
 
 Generated by Gaggle AI Team 🦆
             """.strip(),
-            "due_on": (sprint.start_date + timedelta(weeks=sprint.duration_weeks)).isoformat() if sprint.start_date else None,
-            "state": "open"
+            "due_on": (
+                (sprint.start_date + timedelta(weeks=sprint.duration_weeks)).isoformat()
+                if sprint.start_date
+                else None
+            ),
+            "state": "open",
         }
-        
+
         result = await self._make_request(
-            "POST",
-            f"repos/{self.repo}/milestones",
-            data=milestone_data
+            "POST", f"repos/{self.repo}/milestones", data=milestone_data
         )
-        
+
         self.logger.info(
             "sprint_milestone_created",
             sprint_id=sprint.id,
             milestone_number=result.get("number"),
-            milestone_url=result.get("html_url")
+            milestone_url=result.get("html_url"),
         )
-        
+
         return result
-    
+
     async def create_user_story_issue(
-        self, 
-        user_story: UserStory, 
-        milestone_number: Optional[int] = None,
-        labels: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self,
+        user_story: UserStory,
+        milestone_number: int | None = None,
+        labels: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Create a GitHub issue for a user story."""
-        
+
         # Format acceptance criteria
-        acceptance_criteria_text = "\n".join([
-            f"- [ ] {criteria.description}" 
-            for criteria in user_story.acceptance_criteria
-        ])
-        
+        acceptance_criteria_text = "\n".join(
+            [
+                f"- [ ] {criteria.description}"
+                for criteria in user_story.acceptance_criteria
+            ]
+        )
+
         issue_body = f"""
 ## User Story
 {user_story.description}
@@ -177,38 +181,41 @@ This issue was created by the Gaggle AI Team Product Owner.
 ---
 *Generated by Gaggle 🦆*
         """.strip()
-        
+
         issue_data = {
             "title": user_story.title,
             "body": issue_body,
-            "labels": labels or ["user-story", f"priority-{user_story.priority.value}", "gaggle-generated"],
-            "milestone": milestone_number
+            "labels": labels
+            or [
+                "user-story",
+                f"priority-{user_story.priority.value}",
+                "gaggle-generated",
+            ],
+            "milestone": milestone_number,
         }
-        
+
         result = await self._make_request(
-            "POST",
-            f"repos/{self.repo}/issues",
-            data=issue_data
+            "POST", f"repos/{self.repo}/issues", data=issue_data
         )
-        
+
         self.logger.info(
             "user_story_issue_created",
             story_id=user_story.id,
             issue_number=result.get("number"),
-            issue_url=result.get("html_url")
+            issue_url=result.get("html_url"),
         )
-        
+
         return result
-    
+
     async def create_task_issue(
-        self, 
-        task: TaskModel, 
-        user_story_issue_number: Optional[int] = None,
-        milestone_number: Optional[int] = None,
-        labels: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self,
+        task: TaskModel,
+        user_story_issue_number: int | None = None,
+        milestone_number: int | None = None,
+        labels: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Create a GitHub issue for a development task."""
-        
+
         issue_body = f"""
 ## Task Description
 {task.description}
@@ -226,7 +233,7 @@ This task was created by the Gaggle AI Team Tech Lead during sprint planning.
 ---
 *Generated by Gaggle 🦆*
         """.strip()
-        
+
         task_labels = labels or ["task", "gaggle-generated"]
         if task.assigned_to:
             if "frontend" in task.assigned_to.lower():
@@ -235,242 +242,200 @@ This task was created by the Gaggle AI Team Tech Lead during sprint planning.
                 task_labels.append("backend")
             elif "fullstack" in task.assigned_to.lower():
                 task_labels.append("fullstack")
-        
+
         issue_data = {
             "title": task.title,
             "body": issue_body,
             "labels": task_labels,
-            "milestone": milestone_number
+            "milestone": milestone_number,
         }
-        
+
         result = await self._make_request(
-            "POST",
-            f"repos/{self.repo}/issues",
-            data=issue_data
+            "POST", f"repos/{self.repo}/issues", data=issue_data
         )
-        
+
         self.logger.info(
             "task_issue_created",
             task_id=task.id,
             issue_number=result.get("number"),
-            issue_url=result.get("html_url")
+            issue_url=result.get("html_url"),
         )
-        
+
         return result
-    
+
     async def create_pull_request(
-        self, 
+        self,
         title: str,
         description: str,
         head_branch: str,
         base_branch: str = "main",
-        issue_numbers: Optional[List[int]] = None,
-        reviewers: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        issue_numbers: list[int] | None = None,
+        reviewers: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Create a pull request."""
-        
+
         # Add issue references to description
         if issue_numbers:
             issue_refs = "\n".join([f"Closes #{num}" for num in issue_numbers])
             description = f"{description}\n\n## Related Issues\n{issue_refs}"
-        
+
         description += "\n\n---\n*Generated by Gaggle AI Team 🦆*"
-        
+
         pr_data = {
             "title": title,
             "body": description,
             "head": head_branch,
             "base": base_branch,
-            "draft": False
+            "draft": False,
         }
-        
+
         result = await self._make_request(
-            "POST",
-            f"repos/{self.repo}/pulls",
-            data=pr_data
+            "POST", f"repos/{self.repo}/pulls", data=pr_data
         )
-        
+
         # Add reviewers if specified
         if reviewers and result.get("number"):
             await self.add_pull_request_reviewers(result["number"], reviewers)
-        
+
         self.logger.info(
             "pull_request_created",
             pr_number=result.get("number"),
             pr_url=result.get("html_url"),
             head_branch=head_branch,
-            base_branch=base_branch
+            base_branch=base_branch,
         )
-        
+
         return result
-    
+
     async def add_pull_request_reviewers(
-        self, 
-        pr_number: int, 
-        reviewers: List[str]
-    ) -> Dict[str, Any]:
+        self, pr_number: int, reviewers: list[str]
+    ) -> dict[str, Any]:
         """Add reviewers to a pull request."""
-        
-        reviewer_data = {
-            "reviewers": reviewers
-        }
-        
+
+        reviewer_data = {"reviewers": reviewers}
+
         result = await self._make_request(
             "POST",
             f"repos/{self.repo}/pulls/{pr_number}/requested_reviewers",
-            data=reviewer_data
+            data=reviewer_data,
         )
-        
-        self.logger.info(
-            "pr_reviewers_added",
-            pr_number=pr_number,
-            reviewers=reviewers
-        )
-        
+
+        self.logger.info("pr_reviewers_added", pr_number=pr_number, reviewers=reviewers)
+
         return result
-    
+
     async def update_issue_status(
-        self, 
-        issue_number: int, 
-        state: str,
-        labels: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, issue_number: int, state: str, labels: list[str] | None = None
+    ) -> dict[str, Any]:
         """Update issue status and labels."""
-        
-        update_data = {
-            "state": state
-        }
-        
+
+        update_data = {"state": state}
+
         if labels:
             update_data["labels"] = labels
-        
+
         result = await self._make_request(
-            "PATCH",
-            f"repos/{self.repo}/issues/{issue_number}",
-            data=update_data
+            "PATCH", f"repos/{self.repo}/issues/{issue_number}", data=update_data
         )
-        
+
         self.logger.info(
             "issue_status_updated",
             issue_number=issue_number,
             new_state=state,
-            labels=labels
+            labels=labels,
         )
-        
+
         return result
-    
+
     async def create_project_board(
-        self, 
-        name: str, 
-        description: str,
-        columns: List[str] = None
-    ) -> Dict[str, Any]:
+        self, name: str, description: str, columns: list[str] = None
+    ) -> dict[str, Any]:
         """Create a GitHub project board for sprint management."""
-        
+
         if not columns:
-            columns = ["Backlog", "Sprint Planning", "In Progress", "Code Review", "Testing", "Done"]
-        
+            columns = [
+                "Backlog",
+                "Sprint Planning",
+                "In Progress",
+                "Code Review",
+                "Testing",
+                "Done",
+            ]
+
         # Create the project
-        project_data = {
-            "name": name,
-            "body": description
-        }
-        
+        project_data = {"name": name, "body": description}
+
         project = await self._make_request(
-            "POST",
-            f"repos/{self.repo}/projects",
-            data=project_data
+            "POST", f"repos/{self.repo}/projects", data=project_data
         )
-        
+
         # Create columns
         project_id = project["id"]
         created_columns = []
-        
+
         for column_name in columns:
-            column_data = {
-                "name": column_name
-            }
-            
+            column_data = {"name": column_name}
+
             column = await self._make_request(
-                "POST",
-                f"projects/{project_id}/columns",
-                data=column_data
+                "POST", f"projects/{project_id}/columns", data=column_data
             )
-            
+
             created_columns.append(column)
-        
+
         self.logger.info(
             "project_board_created",
             project_id=project_id,
             project_url=project.get("html_url"),
-            columns_created=len(created_columns)
+            columns_created=len(created_columns),
         )
-        
-        return {
-            "project": project,
-            "columns": created_columns
-        }
-    
+
+        return {"project": project, "columns": created_columns}
+
     async def add_issue_to_project(
-        self, 
-        project_column_id: int, 
-        issue_id: int
-    ) -> Dict[str, Any]:
+        self, project_column_id: int, issue_id: int
+    ) -> dict[str, Any]:
         """Add an issue to a project board column."""
-        
-        card_data = {
-            "content_id": issue_id,
-            "content_type": "Issue"
-        }
-        
+
+        card_data = {"content_id": issue_id, "content_type": "Issue"}
+
         result = await self._make_request(
-            "POST",
-            f"projects/columns/{project_column_id}/cards",
-            data=card_data
+            "POST", f"projects/columns/{project_column_id}/cards", data=card_data
         )
-        
+
         self.logger.info(
             "issue_added_to_project",
             project_column_id=project_column_id,
             issue_id=issue_id,
-            card_id=result.get("id")
+            card_id=result.get("id"),
         )
-        
+
         return result
-    
-    async def get_repository_insights(self) -> Dict[str, Any]:
+
+    async def get_repository_insights(self) -> dict[str, Any]:
         """Get repository insights and metrics."""
-        
+
         # Get repository information
         repo_info = await self._make_request("GET", f"repos/{self.repo}")
-        
+
         # Get recent commits
         commits = await self._make_request(
-            "GET", 
-            f"repos/{self.repo}/commits",
-            params={"per_page": 10}
+            "GET", f"repos/{self.repo}/commits", params={"per_page": 10}
         )
-        
+
         # Get open issues and PRs
         issues = await self._make_request(
-            "GET",
-            f"repos/{self.repo}/issues",
-            params={"state": "open", "per_page": 50}
+            "GET", f"repos/{self.repo}/issues", params={"state": "open", "per_page": 50}
         )
-        
+
         pulls = await self._make_request(
-            "GET",
-            f"repos/{self.repo}/pulls",
-            params={"state": "open", "per_page": 50}
+            "GET", f"repos/{self.repo}/pulls", params={"state": "open", "per_page": 50}
         )
-        
+
         # Get milestones
         milestones = await self._make_request(
-            "GET",
-            f"repos/{self.repo}/milestones",
-            params={"state": "open"}
+            "GET", f"repos/{self.repo}/milestones", params={"state": "open"}
         )
-        
+
         return {
             "repository": {
                 "name": repo_info.get("name"),
@@ -479,117 +444,134 @@ This task was created by the Gaggle AI Team Tech Lead during sprint planning.
                 "forks": repo_info.get("forks_count"),
                 "open_issues": repo_info.get("open_issues_count"),
                 "default_branch": repo_info.get("default_branch"),
-                "language": repo_info.get("language")
+                "language": repo_info.get("language"),
             },
             "activity": {
                 "recent_commits": len(commits),
                 "open_issues": len([i for i in issues if not i.get("pull_request")]),
                 "open_pull_requests": len(pulls),
-                "active_milestones": len(milestones)
+                "active_milestones": len(milestones),
             },
             "gaggle_metrics": {
-                "gaggle_issues": len([i for i in issues if any("gaggle" in label.get("name", "").lower() for label in i.get("labels", []))]),
-                "sprint_milestones": len([m for m in milestones if "sprint" in m.get("title", "").lower()])
-            }
+                "gaggle_issues": len(
+                    [
+                        i
+                        for i in issues
+                        if any(
+                            "gaggle" in label.get("name", "").lower()
+                            for label in i.get("labels", [])
+                        )
+                    ]
+                ),
+                "sprint_milestones": len(
+                    [m for m in milestones if "sprint" in m.get("title", "").lower()]
+                ),
+            },
         }
-    
-    async def sync_sprint_with_github(self, sprint: SprintModel) -> Dict[str, Any]:
+
+    async def sync_sprint_with_github(self, sprint: SprintModel) -> dict[str, Any]:
         """Comprehensive sprint synchronization with GitHub."""
-        
+
         sync_results = {
             "sprint_id": sprint.id,
             "milestone": None,
             "user_story_issues": [],
             "task_issues": [],
             "project_board": None,
-            "sync_timestamp": datetime.now().isoformat()
+            "sync_timestamp": datetime.now().isoformat(),
         }
-        
+
         try:
             # 1. Create milestone for sprint
             milestone = await self.create_sprint_milestone(sprint)
             sync_results["milestone"] = milestone
-            
+
             # 2. Create issues for user stories
             for story in sprint.user_stories:
                 story_issue = await self.create_user_story_issue(
-                    story, 
+                    story,
                     milestone_number=milestone.get("number"),
-                    labels=["user-story", f"priority-{story.priority.value}", "gaggle-sprint"]
+                    labels=[
+                        "user-story",
+                        f"priority-{story.priority.value}",
+                        "gaggle-sprint",
+                    ],
                 )
                 sync_results["user_story_issues"].append(story_issue)
-                
+
                 # Wait briefly to avoid rate limiting
                 await asyncio.sleep(0.1)
-            
+
             # 3. Create issues for tasks
             for task in sprint.tasks:
                 # Find related user story issue
                 related_story_issue = None
                 for story_issue in sync_results["user_story_issues"]:
-                    if task.user_story_id and any(story.id == task.user_story_id for story in sprint.user_stories):
+                    if task.user_story_id and any(
+                        story.id == task.user_story_id for story in sprint.user_stories
+                    ):
                         related_story_issue = story_issue.get("number")
                         break
-                
+
                 task_issue = await self.create_task_issue(
                     task,
                     user_story_issue_number=related_story_issue,
                     milestone_number=milestone.get("number"),
-                    labels=["task", "gaggle-sprint"]
+                    labels=["task", "gaggle-sprint"],
                 )
                 sync_results["task_issues"].append(task_issue)
-                
+
                 # Wait briefly to avoid rate limiting
                 await asyncio.sleep(0.1)
-            
+
             # 4. Create project board for sprint management
             project_board = await self.create_project_board(
                 name=f"Sprint {sprint.id} - {sprint.goal}",
-                description=f"Sprint board for {sprint.goal}\n\nManaged by Gaggle AI Team 🦆"
+                description=f"Sprint board for {sprint.goal}\n\nManaged by Gaggle AI Team 🦆",
             )
             sync_results["project_board"] = project_board
-            
+
             self.logger.info(
                 "sprint_github_sync_completed",
                 sprint_id=sprint.id,
                 milestone_created=bool(milestone),
                 stories_synced=len(sync_results["user_story_issues"]),
                 tasks_synced=len(sync_results["task_issues"]),
-                project_board_created=bool(project_board)
+                project_board_created=bool(project_board),
             )
-            
+
         except Exception as e:
             self.logger.error(
-                "sprint_github_sync_failed",
-                sprint_id=sprint.id,
-                error=str(e)
+                "sprint_github_sync_failed", sprint_id=sprint.id, error=str(e)
             )
             sync_results["error"] = str(e)
-        
+
         return sync_results
 
 
 class GitHubWebhookHandler:
     """Handle GitHub webhooks for real-time updates."""
-    
-    def __init__(self, webhook_secret: Optional[str] = None):
+
+    def __init__(self, webhook_secret: str | None = None):
         self.webhook_secret = webhook_secret
         self.logger = get_logger("github_webhook")
-    
-    async def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
+
+    async def handle_webhook(
+        self, payload: dict[str, Any], headers: dict[str, str]
+    ) -> dict[str, Any]:
         """Handle incoming GitHub webhook."""
-        
+
         event_type = headers.get("X-GitHub-Event")
-        
+
         if not event_type:
             return {"error": "Missing event type header"}
-        
+
         # Verify webhook signature if secret is configured
         if self.webhook_secret:
             signature = headers.get("X-Hub-Signature-256")
             if not self._verify_signature(payload, signature):
                 return {"error": "Invalid webhook signature"}
-        
+
         # Route to appropriate handler
         if event_type == "issues":
             return await self._handle_issue_event(payload)
@@ -602,97 +584,93 @@ class GitHubWebhookHandler:
         else:
             self.logger.info("unhandled_webhook_event", event_type=event_type)
             return {"message": f"Event type {event_type} not handled"}
-    
-    def _verify_signature(self, payload: Dict[str, Any], signature: str) -> bool:
+
+    def _verify_signature(self, payload: dict[str, Any], signature: str) -> bool:
         """Verify webhook signature."""
-        import hmac
         import hashlib
-        
+        import hmac
+
         if not signature or not signature.startswith("sha256="):
             return False
-        
+
         expected_signature = hmac.new(
-            self.webhook_secret.encode(),
-            json.dumps(payload).encode(),
-            hashlib.sha256
+            self.webhook_secret.encode(), json.dumps(payload).encode(), hashlib.sha256
         ).hexdigest()
-        
+
         return hmac.compare_digest(f"sha256={expected_signature}", signature)
-    
-    async def _handle_issue_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def _handle_issue_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle issue-related webhook events."""
-        
+
         action = payload.get("action")
         issue = payload.get("issue", {})
-        
+
         self.logger.info(
             "issue_webhook_received",
             action=action,
             issue_number=issue.get("number"),
-            issue_title=issue.get("title")
+            issue_title=issue.get("title"),
         )
-        
+
         # Update internal sprint tracking based on issue changes
         if action in ["closed", "reopened"]:
             # Sync with internal task/story status
             return {"message": f"Issue {action} event processed"}
-        
+
         return {"message": "Issue event processed"}
-    
-    async def _handle_pull_request_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def _handle_pull_request_event(
+        self, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle pull request webhook events."""
-        
+
         action = payload.get("action")
         pr = payload.get("pull_request", {})
-        
+
         self.logger.info(
             "pr_webhook_received",
             action=action,
             pr_number=pr.get("number"),
-            pr_title=pr.get("title")
+            pr_title=pr.get("title"),
         )
-        
+
         if action == "opened":
             # Trigger code review workflow
             return {"message": "PR opened, code review triggered"}
         elif action == "closed" and pr.get("merged"):
             # Update task status, trigger deployment
             return {"message": "PR merged, deployment triggered"}
-        
+
         return {"message": "PR event processed"}
-    
-    async def _handle_push_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def _handle_push_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle push webhook events."""
-        
+
         ref = payload.get("ref")
         commits = payload.get("commits", [])
-        
-        self.logger.info(
-            "push_webhook_received",
-            ref=ref,
-            commit_count=len(commits)
-        )
-        
+
+        self.logger.info("push_webhook_received", ref=ref, commit_count=len(commits))
+
         # Trigger CI/CD if push to main branch
         if ref == "refs/heads/main":
             return {"message": "Push to main branch, CI/CD triggered"}
-        
+
         return {"message": "Push event processed"}
-    
-    async def _handle_milestone_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def _handle_milestone_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Handle milestone webhook events."""
-        
+
         action = payload.get("action")
         milestone = payload.get("milestone", {})
-        
+
         self.logger.info(
             "milestone_webhook_received",
             action=action,
-            milestone_title=milestone.get("title")
+            milestone_title=milestone.get("title"),
         )
-        
+
         if action == "closed":
             # Sprint completed, trigger sprint review
             return {"message": "Milestone closed, sprint review triggered"}
-        
+
         return {"message": "Milestone event processed"}

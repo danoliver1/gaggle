@@ -2,40 +2,40 @@
 
 from .adaptive_planning import (
     AdaptiveSprintPlanner,
-    VelocityTracker,
-    RiskAssessment,
     CapacityPlanner,
-    SprintMetrics
+    RiskAssessment,
+    SprintMetrics,
+    VelocityTracker,
 )
 from .continuous_learning import (
+    CoordinationPattern,
     LearningEngine,
     PatternRecognizer,
     PerformanceTracker,
     RetrospectiveAnalyzer,
-    CoordinationPattern
 )
 from .quality_gates import (
-    QualityGateManager,
-    ReviewStage,
-    ParallelTester,
     MetricsCollector,
-    QualityMetrics
+    ParallelTester,
+    QualityGateManager,
+    QualityMetrics,
+    ReviewStage,
 )
 
 __all__ = [
     "AdaptiveSprintPlanner",
-    "VelocityTracker", 
+    "VelocityTracker",
     "RiskAssessment",
     "CapacityPlanner",
     "SprintMetrics",
     "LearningEngine",
     "PatternRecognizer",
     "PerformanceTracker",
-    "RetrospectiveAnalyzer", 
+    "RetrospectiveAnalyzer",
     "CoordinationPattern",
     "QualityGateManager",
     "ReviewStage",
     "ParallelTester",
     "MetricsCollector",
-    "QualityMetrics"
+    "QualityMetrics",
 ]

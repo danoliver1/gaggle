@@ -1,7 +1,8 @@
 """Structured logging configuration for Gaggle."""
 
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
+
 import structlog
 from structlog.typing import EventDict
 
@@ -11,6 +12,7 @@ from ..config.settings import settings
 def add_timestamp(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
     """Add timestamp to log events."""
     import datetime
+
     event_dict["timestamp"] = datetime.datetime.utcnow().isoformat()
     return event_dict
 
@@ -23,7 +25,7 @@ def add_level(logger: Any, method_name: str, event_dict: EventDict) -> EventDict
 
 def setup_logging() -> None:
     """Configure structured logging for the application."""
-    
+
     processors = [
         add_timestamp,
         add_level,
@@ -32,16 +34,18 @@ def setup_logging() -> None:
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]
-    
+
     if settings.structured_logging:
         # JSON output for structured logging
         processors.append(structlog.processors.JSONRenderer())
     else:
         # Human-readable output for development
-        processors.extend([
-            structlog.dev.ConsoleRenderer(colors=True),
-        ])
-    
+        processors.extend(
+            [
+                structlog.dev.ConsoleRenderer(colors=True),
+            ]
+        )
+
     structlog.configure(
         processors=processors,
         context_class=dict,
@@ -49,9 +53,10 @@ def setup_logging() -> None:
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    
+
     # Configure standard library logging
     import logging
+
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
@@ -66,12 +71,12 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
 
 class LoggerMixin:
     """Mixin to add structured logging to classes."""
-    
+
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:
         """Get logger for this class."""
         return get_logger(self.__class__.__name__)
-    
+
     def log_event(self, event: str, **kwargs: Any) -> None:
         """Log an event with additional context."""
         self.logger.info(event, **kwargs)

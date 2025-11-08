@@ -1,21 +1,21 @@
 """Structured communication system for agent coordination."""
 
+from .bus import MessageBus, MessageRouter
 from .messages import (
     AgentMessage,
-    TaskAssignmentMessage,
-    SprintPlanningMessage,
     CodeReviewMessage,
-    StandupUpdateMessage,
-    ValidationResult,
+    MessagePriority,
     MessageType,
-    MessagePriority
+    SprintPlanningMessage,
+    StandupUpdateMessage,
+    TaskAssignmentMessage,
+    ValidationResult,
 )
 from .protocols import CommunicationProtocol, ProtocolValidator
-from .bus import MessageBus, MessageRouter
 
 __all__ = [
     "AgentMessage",
-    "TaskAssignmentMessage", 
+    "TaskAssignmentMessage",
     "SprintPlanningMessage",
     "CodeReviewMessage",
     "StandupUpdateMessage",
@@ -25,5 +25,5 @@ __all__ = [
     "CommunicationProtocol",
     "ProtocolValidator",
     "MessageBus",
-    "MessageRouter"
+    "MessageRouter",
 ]

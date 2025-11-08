@@ -33,6 +33,10 @@ dependencies = [
     "structlog>=24.1.0",
     "aiohttp>=3.13.2",
     "boto3>=1.40.69",
+    # GitHub and LLM integrations
+    "PyGithub>=2.1.0",
+    "anthropic>=0.34.0",
+    "PyJWT>=2.8.0",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +51,7 @@ dev = [
     "ruff>=0.3.0",
     "black>=24.2.0",
     "mypy>=1.9.0",
+    "pre-commit>=3.6.0",
 ]
 
 api = [
@@ -71,8 +76,45 @@ path = "src/gaggle/__init__.py"
 [tool.ruff]
 target-version = "py310"
 line-length = 88
-select = ["E", "F", "I", "N", "W", "B", "C4", "UP", "SIM"]
-ignore = ["E501", "W503"]
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings  
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "A",    # flake8-builtins
+    "T20",  # flake8-print
+]
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "T201",  # Print found (we use print in CLI)
+    "A003",  # Class attribute is shadowing a python builtin
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["gaggle"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
 
 [tool.black]
 line-length = 88
@@ -94,6 +136,9 @@ addopts = "--cov=src/gaggle --cov-report=html --cov-report=term-missing"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.3.0",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.3",
 ]

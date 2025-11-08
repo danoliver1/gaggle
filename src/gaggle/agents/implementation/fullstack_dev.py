@@ -1,13 +1,13 @@
 """Fullstack Developer agent implementation."""
 
-from typing import List, Dict, Any, Optional
+from typing import Any
 
-from ..base import ImplementationAgent, AgentContext
 from ...config.models import AgentRole
 from ...models.task import TaskModel
-from ...tools.code_tools import CodeGenerationTool, CodeAnalysisTool
-from ...tools.testing_tools import TestingTool
+from ...tools.code_tools import CodeAnalysisTool, CodeGenerationTool
 from ...tools.github_tools import GitHubTool
+from ...tools.testing_tools import TestingTool
+from ..base import AgentContext, ImplementationAgent
 
 
 class FullstackDeveloper(ImplementationAgent):
@@ -20,16 +20,16 @@ class FullstackDeveloper(ImplementationAgent):
     - Writing comprehensive tests across the full stack
     - Optimizing performance across all layers
     """
-    
-    def __init__(self, name: Optional[str] = None, context: Optional[AgentContext] = None):
+
+    def __init__(self, name: str | None = None, context: AgentContext | None = None):
         super().__init__(AgentRole.FULLSTACK_DEV, name, context)
-        
+
         # Tools specific to Fullstack Developer
         self.code_tool = CodeGenerationTool()
         self.analysis_tool = CodeAnalysisTool()
         self.testing_tool = TestingTool()
         self.github_tool = GitHubTool() if context else None
-    
+
     def _get_instruction(self) -> str:
         """Get the instruction prompt for the Fullstack Developer."""
         return """You are a Fullstack Developer in an Agile Scrum team. Your responsibilities include:
@@ -77,40 +77,38 @@ class FullstackDeveloper(ImplementationAgent):
 - System-wide performance and security
 - DevOps automation and reliability
 - Cross-functional collaboration and knowledge sharing"""
-    
-    def _get_tools(self) -> List[Any]:
+
+    def _get_tools(self) -> list[Any]:
         """Get tools available to the Fullstack Developer."""
         tools = []
-        if hasattr(self, 'code_tool'):
+        if hasattr(self, "code_tool"):
             tools.append(self.code_tool)
-        if hasattr(self, 'analysis_tool'):
+        if hasattr(self, "analysis_tool"):
             tools.append(self.analysis_tool)
-        if hasattr(self, 'testing_tool'):
+        if hasattr(self, "testing_tool"):
             tools.append(self.testing_tool)
-        if hasattr(self, 'github_tool'):
+        if hasattr(self, "github_tool"):
             tools.append(self.github_tool)
         return tools
-    
+
     async def implement_end_to_end_feature(
-        self, 
-        task: TaskModel, 
-        feature_spec: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, task: TaskModel, feature_spec: dict[str, Any]
+    ) -> dict[str, Any]:
         """Implement a complete end-to-end feature."""
-        
+
         implementation_prompt = f"""
         Implement a complete end-to-end feature with the following specifications:
-        
+
         Task: {task.title}
         Description: {task.description}
-        
+
         Feature Specifications:
         - Frontend components: {feature_spec.get('frontend_components', [])}
         - Backend endpoints: {feature_spec.get('backend_endpoints', [])}
         - Database changes: {feature_spec.get('database_changes', [])}
         - Third-party integrations: {feature_spec.get('integrations', [])}
         - Real-time features: {feature_spec.get('realtime', False)}
-        
+
         Requirements:
         1. Frontend: Implement UI components with proper state management
         2. Backend: Create APIs with validation and error handling
@@ -120,7 +118,7 @@ class FullstackDeveloper(ImplementationAgent):
         6. Performance: Optimize data flow and rendering
         7. Security: Implement proper authentication and authorization
         8. Documentation: Create comprehensive feature documentation
-        
+
         Provide:
         - Complete frontend implementation
         - Backend API implementation
@@ -130,34 +128,38 @@ class FullstackDeveloper(ImplementationAgent):
         - Performance optimization strategies
         - Security implementation details
         """
-        
+
         result = await self.execute(implementation_prompt)
-        
+
         # Generate code for both frontend and backend
-        frontend_code = await self.code_tool.generate_component({
-            "type": "fullstack_feature",
-            "components": feature_spec.get('frontend_components', []),
-            "framework": "React",
-            "typescript": True
-        })
-        
-        backend_code = await self.code_tool.generate_api({
-            "endpoints": feature_spec.get('backend_endpoints', []),
-            "framework": "FastAPI",
-            "database": True,
-            "authentication": True
-        })
-        
+        frontend_code = await self.code_tool.generate_component(
+            {
+                "type": "fullstack_feature",
+                "components": feature_spec.get("frontend_components", []),
+                "framework": "React",
+                "typescript": True,
+            }
+        )
+
+        backend_code = await self.code_tool.generate_api(
+            {
+                "endpoints": feature_spec.get("backend_endpoints", []),
+                "framework": "FastAPI",
+                "database": True,
+                "authentication": True,
+            }
+        )
+
         # Log implementation
         self.logger.info(
             "end_to_end_feature_implemented",
             task_id=task.id,
-            frontend_components=len(feature_spec.get('frontend_components', [])),
-            backend_endpoints=len(feature_spec.get('backend_endpoints', [])),
-            has_realtime=feature_spec.get('realtime', False),
-            has_integrations=len(feature_spec.get('integrations', [])) > 0
+            frontend_components=len(feature_spec.get("frontend_components", [])),
+            backend_endpoints=len(feature_spec.get("backend_endpoints", [])),
+            has_realtime=feature_spec.get("realtime", False),
+            has_integrations=len(feature_spec.get("integrations", [])) > 0,
         )
-        
+
         return {
             "task_id": task.id,
             "feature_implementation": result.get("result", ""),
@@ -180,30 +182,28 @@ class FullstackDeveloper(ImplementationAgent):
                 "alembic/versions/002_add_feature_tables.py",
                 # Test files
                 "tests/e2e/test_feature_workflow.py",
-                "tests/integration/test_feature_api.py"
-            ]
+                "tests/integration/test_feature_api.py",
+            ],
         }
-    
+
     async def setup_deployment_pipeline(
-        self, 
-        task: TaskModel, 
-        deployment_spec: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, task: TaskModel, deployment_spec: dict[str, Any]
+    ) -> dict[str, Any]:
         """Set up CI/CD deployment pipeline."""
-        
+
         deployment_prompt = f"""
         Set up deployment pipeline for:
-        
+
         Task: {task.title}
         Description: {task.description}
-        
+
         Deployment Specifications:
         - Environment: {deployment_spec.get('environment', 'cloud')}
         - Platform: {deployment_spec.get('platform', 'AWS')}
         - Container: {deployment_spec.get('containerized', True)}
         - Database: {deployment_spec.get('database_type', 'PostgreSQL')}
         - Monitoring: {deployment_spec.get('monitoring_required', True)}
-        
+
         Requirements:
         1. Create Dockerfile for both frontend and backend
         2. Set up docker-compose for local development
@@ -213,7 +213,7 @@ class FullstackDeveloper(ImplementationAgent):
         6. Add environment configuration management
         7. Implement health checks and monitoring
         8. Create deployment documentation and runbooks
-        
+
         Provide:
         - Docker configuration files
         - CI/CD pipeline configuration
@@ -222,19 +222,19 @@ class FullstackDeveloper(ImplementationAgent):
         - Monitoring and alerting setup
         - Deployment documentation
         """
-        
+
         result = await self.execute(deployment_prompt)
-        
+
         # Log implementation
         self.logger.info(
             "deployment_pipeline_created",
             task_id=task.id,
-            environment=deployment_spec.get('environment'),
-            platform=deployment_spec.get('platform'),
-            containerized=deployment_spec.get('containerized', True),
-            monitoring_enabled=deployment_spec.get('monitoring_required', True)
+            environment=deployment_spec.get("environment"),
+            platform=deployment_spec.get("platform"),
+            containerized=deployment_spec.get("containerized", True),
+            monitoring_enabled=deployment_spec.get("monitoring_required", True),
         )
-        
+
         return {
             "task_id": task.id,
             "deployment_implementation": result.get("result", ""),
@@ -251,30 +251,28 @@ class FullstackDeveloper(ImplementationAgent):
                 "infrastructure/terraform/main.tf",
                 "k8s/deployment.yml",
                 "k8s/service.yml",
-                "docs/deployment-guide.md"
-            ]
+                "docs/deployment-guide.md",
+            ],
         }
-    
+
     async def implement_real_time_features(
-        self, 
-        task: TaskModel, 
-        realtime_spec: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, task: TaskModel, realtime_spec: dict[str, Any]
+    ) -> dict[str, Any]:
         """Implement real-time features using WebSockets or similar."""
-        
+
         realtime_prompt = f"""
         Implement real-time features for:
-        
+
         Task: {task.title}
         Description: {task.description}
-        
+
         Real-time Specifications:
         - Communication type: {realtime_spec.get('type', 'WebSocket')}
         - Features: {realtime_spec.get('features', [])}
         - Scaling requirements: {realtime_spec.get('scaling', 'single_server')}
         - Authentication: {realtime_spec.get('auth_required', True)}
         - Message persistence: {realtime_spec.get('persistence', False)}
-        
+
         Requirements:
         1. Backend: Implement WebSocket server with connection management
         2. Frontend: Create WebSocket client with reconnection logic
@@ -284,7 +282,7 @@ class FullstackDeveloper(ImplementationAgent):
         6. Error handling: Robust error handling and fallback mechanisms
         7. Testing: Test real-time functionality and edge cases
         8. Performance: Optimize for low latency and high throughput
-        
+
         Provide:
         - WebSocket server implementation
         - Client-side real-time connection handling
@@ -294,26 +292,26 @@ class FullstackDeveloper(ImplementationAgent):
         - Error handling and reconnection logic
         - Real-time feature tests
         """
-        
+
         result = await self.execute(realtime_prompt)
-        
+
         # Log implementation
         self.logger.info(
             "realtime_features_implemented",
             task_id=task.id,
-            communication_type=realtime_spec.get('type'),
-            features_count=len(realtime_spec.get('features', [])),
-            requires_scaling=realtime_spec.get('scaling') != 'single_server',
-            has_persistence=realtime_spec.get('persistence', False)
+            communication_type=realtime_spec.get("type"),
+            features_count=len(realtime_spec.get("features", [])),
+            requires_scaling=realtime_spec.get("scaling") != "single_server",
+            has_persistence=realtime_spec.get("persistence", False),
         )
-        
+
         return {
             "task_id": task.id,
             "realtime_implementation": result.get("result", ""),
             "websocket_server_ready": True,
             "client_integration_complete": True,
             "authentication_secured": True,
-            "scaling_configured": realtime_spec.get('scaling') != 'single_server',
+            "scaling_configured": realtime_spec.get("scaling") != "single_server",
             "test_coverage": 87.0,
             "files_created": [
                 "src/websocket/server.py",
@@ -321,33 +319,31 @@ class FullstackDeveloper(ImplementationAgent):
                 "src/frontend/hooks/useWebSocket.ts",
                 "src/frontend/services/realtimeService.ts",
                 "tests/test_websocket_integration.py",
-                "tests/test_realtime_features.py"
-            ]
+                "tests/test_realtime_features.py",
+            ],
         }
-    
+
     async def optimize_full_stack_performance(
-        self, 
-        task: TaskModel, 
-        optimization_targets: List[str]
-    ) -> Dict[str, Any]:
+        self, task: TaskModel, optimization_targets: list[str]
+    ) -> dict[str, Any]:
         """Optimize performance across the entire stack."""
-        
+
         optimization_prompt = f"""
         Optimize full-stack performance for:
-        
+
         Task: {task.title}
         Description: {task.description}
-        
+
         Optimization Targets:
         {', '.join(optimization_targets)}
-        
+
         Focus Areas:
         1. Frontend performance (bundle size, rendering, caching)
         2. Backend performance (API response times, database queries)
         3. Network optimization (compression, CDN, caching headers)
         4. Database optimization (queries, indexes, connection pooling)
         5. Infrastructure optimization (load balancing, auto-scaling)
-        
+
         Requirements:
         - Implement frontend code splitting and lazy loading
         - Optimize API endpoints and database queries
@@ -355,7 +351,7 @@ class FullstackDeveloper(ImplementationAgent):
         - Implement CDN and asset optimization
         - Set up performance monitoring across all layers
         - Create performance budgets and CI checks
-        
+
         Provide:
         - Frontend performance optimizations
         - Backend performance improvements
@@ -364,22 +360,22 @@ class FullstackDeveloper(ImplementationAgent):
         - Infrastructure optimization recommendations
         - Performance monitoring setup
         """
-        
+
         result = await self.execute(optimization_prompt)
-        
+
         # Analyze performance improvements
         performance_analysis = await self.analysis_tool.analyze_quality(
             result.get("result", "")
         )
-        
+
         self.logger.info(
             "fullstack_performance_optimized",
             task_id=task.id,
             optimization_targets=optimization_targets,
             overall_improvement=35.7,
-            layers_optimized=5
+            layers_optimized=5,
         )
-        
+
         return {
             "task_id": task.id,
             "optimization_result": result.get("result", ""),
@@ -389,36 +385,34 @@ class FullstackDeveloper(ImplementationAgent):
                 "backend_improvement": "45% faster API responses",
                 "database_improvement": "52% query optimization",
                 "network_improvement": "33% reduced data transfer",
-                "overall_improvement": "35.7% performance boost"
+                "overall_improvement": "35.7% performance boost",
             },
             "optimizations_applied": [
                 "Frontend code splitting",
                 "API response caching",
                 "Database indexing",
                 "CDN implementation",
-                "Gzip compression"
-            ]
+                "Gzip compression",
+            ],
         }
-    
+
     async def create_integration_tests(
-        self, 
-        task: TaskModel, 
-        integration_spec: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, task: TaskModel, integration_spec: dict[str, Any]
+    ) -> dict[str, Any]:
         """Create comprehensive integration tests across the full stack."""
-        
+
         testing_prompt = f"""
         Create comprehensive integration tests for:
-        
+
         Task: {task.title}
         Description: {task.description}
-        
+
         Integration Test Specifications:
         - User workflows: {integration_spec.get('workflows', [])}
         - API endpoints: {integration_spec.get('api_endpoints', [])}
         - Database operations: {integration_spec.get('database_ops', [])}
         - External services: {integration_spec.get('external_services', [])}
-        
+
         Requirements:
         1. End-to-end user workflow tests (Playwright/Cypress)
         2. API integration tests with database
@@ -428,7 +422,7 @@ class FullstackDeveloper(ImplementationAgent):
         6. Performance tests for critical paths
         7. Security tests for authentication flows
         8. Cross-browser compatibility tests
-        
+
         Provide:
         - E2E test scenarios and implementations
         - API integration test suite
@@ -438,25 +432,28 @@ class FullstackDeveloper(ImplementationAgent):
         - Security test cases
         - Cross-browser test configuration
         """
-        
+
         result = await self.execute(testing_prompt)
-        
+
         # Execute comprehensive testing
-        test_results = await self.testing_tool.execute("run_tests", {
-            "test_types": ["integration", "e2e", "performance"],
-            "coverage_threshold": 90,
-            "frameworks": ["pytest", "playwright"]
-        })
-        
+        test_results = await self.testing_tool.execute(
+            "run_tests",
+            {
+                "test_types": ["integration", "e2e", "performance"],
+                "coverage_threshold": 90,
+                "frameworks": ["pytest", "playwright"],
+            },
+        )
+
         self.logger.info(
             "integration_tests_created",
             task_id=task.id,
-            workflows_tested=len(integration_spec.get('workflows', [])),
-            api_endpoints_tested=len(integration_spec.get('api_endpoints', [])),
-            external_services_mocked=len(integration_spec.get('external_services', [])),
-            test_coverage=test_results.get("coverage", 90)
+            workflows_tested=len(integration_spec.get("workflows", [])),
+            api_endpoints_tested=len(integration_spec.get("api_endpoints", [])),
+            external_services_mocked=len(integration_spec.get("external_services", [])),
+            test_coverage=test_results.get("coverage", 90),
         )
-        
+
         return {
             "task_id": task.id,
             "testing_implementation": result.get("result", ""),
@@ -468,7 +465,7 @@ class FullstackDeveloper(ImplementationAgent):
                 "Database operations",
                 "External service mocking",
                 "Performance benchmarks",
-                "Security flows"
+                "Security flows",
             ],
             "test_files_created": [
                 "tests/e2e/test_user_workflows.py",
@@ -476,30 +473,28 @@ class FullstackDeveloper(ImplementationAgent):
                 "tests/integration/test_frontend_backend.py",
                 "tests/performance/test_load_scenarios.py",
                 "tests/security/test_auth_flows.py",
-                "tests/fixtures/integration_fixtures.py"
-            ]
+                "tests/fixtures/integration_fixtures.py",
+            ],
         }
-    
+
     async def troubleshoot_system_issues(
-        self, 
-        task: TaskModel, 
-        issue_spec: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, task: TaskModel, issue_spec: dict[str, Any]
+    ) -> dict[str, Any]:
         """Troubleshoot complex issues spanning multiple system layers."""
-        
+
         troubleshooting_prompt = f"""
         Troubleshoot system issues for:
-        
+
         Task: {task.title}
         Description: {task.description}
-        
+
         Issue Specifications:
         - Symptoms: {issue_spec.get('symptoms', [])}
         - Affected layers: {issue_spec.get('layers', [])}
         - Error logs: {issue_spec.get('error_logs', '')}
         - Performance impact: {issue_spec.get('performance_impact', 'unknown')}
         - User impact: {issue_spec.get('user_impact', 'unknown')}
-        
+
         Troubleshooting Strategy:
         1. Analyze logs and error patterns across all layers
         2. Trace requests through frontend, backend, and database
@@ -509,7 +504,7 @@ class FullstackDeveloper(ImplementationAgent):
         6. Test with isolated components to identify root cause
         7. Implement fixes with proper testing and validation
         8. Add monitoring to prevent future occurrences
-        
+
         Provide:
         - Root cause analysis with evidence
         - Fix implementation across affected layers
@@ -518,19 +513,19 @@ class FullstackDeveloper(ImplementationAgent):
         - Documentation for future reference
         - Prevention strategies
         """
-        
+
         result = await self.execute(troubleshooting_prompt)
-        
+
         # Log troubleshooting effort
         self.logger.info(
             "system_issues_troubleshot",
             task_id=task.id,
-            symptoms_analyzed=len(issue_spec.get('symptoms', [])),
-            layers_affected=len(issue_spec.get('layers', [])),
-            performance_impact=issue_spec.get('performance_impact'),
-            root_cause_identified=True
+            symptoms_analyzed=len(issue_spec.get("symptoms", [])),
+            layers_affected=len(issue_spec.get("layers", [])),
+            performance_impact=issue_spec.get("performance_impact"),
+            root_cause_identified=True,
         )
-        
+
         return {
             "task_id": task.id,
             "troubleshooting_result": result.get("result", ""),
@@ -543,11 +538,11 @@ class FullstackDeveloper(ImplementationAgent):
                 "Improved logging",
                 "Performance alerts",
                 "Health checks",
-                "Automated testing"
+                "Automated testing",
             ],
             "resolution_files": [
                 "docs/troubleshooting/issue_resolution.md",
                 "src/monitoring/enhanced_monitoring.py",
-                "tests/regression/test_issue_prevention.py"
-            ]
+                "tests/regression/test_issue_prevention.py",
+            ],
         }
