@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class StoryStatus(str, Enum):
@@ -79,17 +79,18 @@ class UserStory(BaseModel):
     business_value: str | None = None
     user_persona: str | None = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
-    @validator('id')
+    @field_validator('id')
+    @classmethod
     def validate_id(cls, v):
         """Validate story ID is not empty."""
         if not v.strip():
             raise ValueError('Story ID cannot be empty')
         return v.strip()
 
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def validate_title(cls, v):
         """Validate story title."""
         if not v.strip():
@@ -98,7 +99,8 @@ class UserStory(BaseModel):
             raise ValueError('Story title must be 200 characters or less')
         return v.strip()
 
-    @validator('description')
+    @field_validator('description')
+    @classmethod
     def validate_description(cls, v):
         """Validate story description."""
         if not v.strip():
@@ -107,7 +109,8 @@ class UserStory(BaseModel):
             raise ValueError('Story description must be at least 10 characters')
         return v.strip()
 
-    @validator('story_points')
+    @field_validator('story_points')
+    @classmethod
     def validate_story_points(cls, v):
         """Validate story points are non-negative."""
         if v < 0:
@@ -186,23 +189,23 @@ class UserStory(BaseModel):
         """
         if not self.dependencies:
             return False
-            
+
         if story_registry is None:
             # Conservative assumption: if we can't check dependencies, assume they're unresolved
             return True
-            
+
         # Check each dependency
         for dep_story_id in self.dependencies:
             dependent_story = story_registry.get(dep_story_id)
-            
+
             if not dependent_story:
                 # Dependency story doesn't exist - unresolved
                 return True
-                
+
             if dependent_story.status not in [StoryStatus.DONE]:
                 # Dependency is not complete - unresolved
                 return True
-                
+
         # All dependencies are resolved
         return False
 

@@ -1,6 +1,6 @@
 """Structured communication system for agent coordination."""
 
-from .bus import MessageBus, MessageRouter, MessageHandler
+from .bus import MessageBus, MessageHandler, MessageRouter
 from .messages import (
     AgentMessage,
     CodeReviewMessage,

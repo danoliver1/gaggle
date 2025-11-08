@@ -12,7 +12,10 @@ from gaggle.agents.implementation.backend_dev import BackendDeveloper
 from gaggle.agents.implementation.frontend_dev import FrontendDeveloper
 from gaggle.agents.qa.qa_engineer import QAEngineer
 from gaggle.config.models import AgentRole
-from gaggle.models.sprint import Sprint, Task, TaskStatus, UserStory
+from gaggle.models.sprint import Sprint
+from gaggle.models.story import UserStory
+from gaggle.models.task import TaskModel as Task
+from gaggle.models.task import TaskStatus
 
 
 @pytest.fixture

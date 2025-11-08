@@ -117,7 +117,7 @@ class TestAdaptiveSprintPlanning:
             mitigation_strategy="Break down stories",
         )
         assessment.risk_factors.append(high_risk)
-        
+
         # Add another high risk to ensure overall HIGH level
         high_risk2 = RiskFactor(
             name="tight_timeline",

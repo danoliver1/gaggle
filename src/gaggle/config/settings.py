@@ -1,7 +1,7 @@
 """Application settings and configuration management."""
 
-from pydantic import Field, validator
-from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class GaggleSettings(BaseSettings):
@@ -49,12 +49,13 @@ class GaggleSettings(BaseSettings):
     debug_mode: bool = Field(False, description="Enable debug mode")
     dry_run: bool = Field(False, description="Enable dry run mode (no actual changes)")
 
-    class Config:
-        env_file = ".env"
-        env_prefix = "GAGGLE_"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="GAGGLE_",
+        case_sensitive=False,
+    )
 
-    @validator("github_token")
+    @field_validator("github_token")
     @classmethod
     def validate_github_token(cls, v):
         """Validate GitHub token format."""
@@ -62,7 +63,7 @@ class GaggleSettings(BaseSettings):
             raise ValueError("GitHub token must start with ghp_ or github_pat_")
         return v
 
-    @validator("log_level")
+    @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v):
         """Validate log level."""

@@ -4,7 +4,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..config.models import AgentRole
 from .story import UserStory
@@ -97,17 +97,18 @@ class SprintModel(BaseModel):
     github_milestone_id: int | None = None
     github_project_id: int | None = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
-    @validator('id')
+    @field_validator('id')
+    @classmethod
     def validate_id(cls, v):
         """Validate sprint ID is not empty."""
         if not v.strip():
             raise ValueError('Sprint ID cannot be empty')
         return v.strip()
 
-    @validator('goal')
+    @field_validator('goal')
+    @classmethod
     def validate_goal(cls, v):
         """Validate sprint goal."""
         if not v.strip():
@@ -116,10 +117,11 @@ class SprintModel(BaseModel):
             raise ValueError('Sprint goal must be at least 10 characters')
         return v.strip()
 
-    @validator('end_date')
-    def validate_end_date(cls, v, values):
+    @field_validator('end_date')
+    @classmethod
+    def validate_end_date(cls, v, info):
         """Validate that end date is after start date."""
-        if v and values.get('start_date') and v <= values['start_date']:
+        if hasattr(info, 'data') and v and info.data.get('start_date') and v <= info.data['start_date']:
             raise ValueError('End date must be after start date')
         return v
 

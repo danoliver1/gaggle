@@ -36,11 +36,11 @@ class BacklogTool(BaseTool):
     async def prioritize_stories(self, stories: list[dict]) -> dict[str, Any]:
         """Prioritize stories in the backlog using business value and dependencies."""
         prioritized = []
-        
+
         # Score each story
         for story in stories:
             score = 0.0
-            
+
             # Business value scoring
             priority = story.get("priority", "medium").lower()
             if priority == "critical":
@@ -51,31 +51,31 @@ class BacklogTool(BaseTool):
                 score += 50
             else:  # low
                 score += 25
-                
+
             # Story points (smaller stories get bonus for early delivery)
             points = story.get("story_points", 5)
             if points <= 3:
                 score += 20  # Small story bonus
             elif points >= 8:
                 score -= 10  # Large story penalty
-                
+
             # Dependency penalty (stories with dependencies get lower priority)
             if story.get("dependencies"):
                 score -= 30
-                
+
             # User impact bonus
             description = story.get("description", "").lower()
             if any(word in description for word in ["user", "customer", "login", "security"]):
                 score += 15
-                
+
             prioritized.append({
                 "story": story,
                 "priority_score": score
             })
-        
+
         # Sort by score (highest first)
         prioritized.sort(key=lambda x: x["priority_score"], reverse=True)
-        
+
         return {
             "prioritized_stories": [item["story"] for item in prioritized],
             "priority_scores": {item["story"]["id"]: item["priority_score"] for item in prioritized if "id" in item["story"]},

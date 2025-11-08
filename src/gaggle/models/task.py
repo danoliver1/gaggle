@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..config.models import AgentRole
 
@@ -121,17 +121,18 @@ class Task(BaseModel):
     # Sprint context
     sprint_id: str | None = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
-    @validator('id')
+    @field_validator('id')
+    @classmethod
     def validate_id(cls, v):
         """Validate task ID is not empty."""
         if not v.strip():
             raise ValueError('Task ID cannot be empty')
         return v.strip()
 
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def validate_title(cls, v):
         """Validate task title."""
         if not v.strip():
@@ -140,7 +141,8 @@ class Task(BaseModel):
             raise ValueError('Task title must be 200 characters or less')
         return v.strip()
 
-    @validator('description')
+    @field_validator('description')
+    @classmethod
     def validate_description(cls, v):
         """Validate task description."""
         if not v.strip():
@@ -149,14 +151,16 @@ class Task(BaseModel):
             raise ValueError('Task description must be at least 10 characters')
         return v.strip()
 
-    @validator('progress_percentage')
+    @field_validator('progress_percentage')
+    @classmethod
     def validate_progress(cls, v):
         """Validate progress percentage is between 0 and 100."""
         if not 0 <= v <= 100:
             raise ValueError('Progress percentage must be between 0 and 100')
         return v
 
-    @validator('estimated_hours', 'actual_hours')
+    @field_validator('estimated_hours', 'actual_hours')
+    @classmethod
     def validate_hours(cls, v):
         """Validate hours are positive."""
         if v is not None and v < 0:

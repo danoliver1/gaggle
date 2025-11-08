@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..config.models import AgentRole, ModelTier
 
@@ -45,17 +45,18 @@ class TeamMember(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_active_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
-    @validator('id')
+    @field_validator('id')
+    @classmethod
     def validate_id(cls, v):
         """Validate team member ID is not empty."""
         if not v.strip():
             raise ValueError('Team member ID cannot be empty')
         return v.strip()
 
-    @validator('name')
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v):
         """Validate team member name is not empty."""
         if not v.strip():
@@ -251,7 +252,7 @@ class TeamConfiguration(BaseModel):
     def optimize_task_assignments(self, task_estimates: list[Any]) -> list[AgentAssignment]:
         """Optimize task assignments across team members using workload balancing and role matching."""
         from ..config.models import calculate_cost, get_model_config
-        
+
         assignments = []
         available_members = self.get_available_members()
         if not available_members:
@@ -259,7 +260,7 @@ class TeamConfiguration(BaseModel):
 
         # Initialize assignments for all available members
         member_assignments = {
-            member.id: AgentAssignment(agent_id=member.id) 
+            member.id: AgentAssignment(agent_id=member.id)
             for member in available_members
         }
 
@@ -276,12 +277,12 @@ class TeamConfiguration(BaseModel):
             task_role = getattr(task, 'assigned_role', None)
             task_type = getattr(task, 'task_type', None)
             estimated_hours = getattr(task, 'estimated_hours', 2.0)
-            
+
             # Find best member for this task
             best_member = self._find_best_member_for_task(
                 available_members, task, member_assignments
             )
-            
+
             if best_member:
                 # Calculate estimated cost
                 model_config = get_model_config(best_member.role)
@@ -309,37 +310,35 @@ class TeamConfiguration(BaseModel):
 
         task_role = getattr(task, 'assigned_role', None)
         task_type = getattr(task, 'task_type', None)
-        
+
         # Score each member
         member_scores = []
-        
+
         for member in available_members:
             score = 0.0
-            
+
             # Role matching bonus
             if task_role and member.role == task_role:
                 score += 100.0
-            
+
             # Task type specialization bonus
             if task_type and hasattr(member, 'specializations'):
                 if any(spec.lower() in str(task_type).lower() for spec in member.specializations):
                     score += 50.0
-            
+
             # Workload balancing penalty (prefer less loaded members)
             current_workload = current_assignments.get(member.id, AgentAssignment(agent_id=member.id))
             workload_penalty = current_workload.estimated_workload_hours * 10
             score -= workload_penalty
-            
+
             # Model tier efficiency bonus (higher tier for complex tasks)
             task_complexity = getattr(task, 'complexity', 'medium')
             model_tier_value = member.model_tier.value if hasattr(member.model_tier, 'value') else str(member.model_tier).lower()
-            if task_complexity == 'high' and model_tier_value in ['opus', 'sonnet']:
+            if task_complexity == 'high' and model_tier_value in ['opus', 'sonnet'] or task_complexity == 'low' and model_tier_value == 'haiku':
                 score += 25.0
-            elif task_complexity == 'low' and model_tier_value == 'haiku':
-                score += 25.0
-                
+
             member_scores.append((member, score))
-        
+
         # Return member with highest score
         member_scores.sort(key=lambda x: x[1], reverse=True)
         return member_scores[0][0] if member_scores else None

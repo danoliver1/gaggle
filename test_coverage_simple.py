@@ -3,14 +3,14 @@
 Simple coverage improvement test suite - focus on basic imports and instantiation.
 """
 
+
 import pytest
-import asyncio
-from datetime import datetime, timedelta
+
 
 # Utils coverage
 def test_utils_imports():
     """Test that all utils modules can be imported."""
-    from gaggle.utils import cost_calculator, token_counter, logging, async_utils
+    from gaggle.utils import async_utils, cost_calculator, logging, token_counter
     assert cost_calculator is not None
     assert token_counter is not None
     assert logging is not None
@@ -18,31 +18,35 @@ def test_utils_imports():
 
 def test_cost_calculator_import():
     """Test cost calculator classes."""
-    from gaggle.utils.cost_calculator import CostCalculator, TaskEstimate, AgentAllocation
+    from gaggle.utils.cost_calculator import (
+        CostCalculator,
+    )
     calculator = CostCalculator()
     assert calculator is not None
 
 def test_token_counter_import():
     """Test token counter classes."""
-    from gaggle.utils.token_counter import TokenCounter, TokenUsage
+    from gaggle.utils.token_counter import TokenCounter
     counter = TokenCounter()
     assert counter is not None
 
 def test_logging_import():
     """Test logging utilities."""
-    from gaggle.utils.logging import get_logger, LoggerMixin, setup_logging
+    from gaggle.utils.logging import get_logger
     logger = get_logger("test")
     assert logger is not None
 
 @pytest.mark.asyncio
 async def test_async_utils_import():
     """Test async utilities."""
-    from gaggle.utils.async_utils import gather_with_concurrency, run_with_timeout, ParallelExecutor
-    
+    from gaggle.utils.async_utils import (
+        run_with_timeout,
+    )
+
     # Simple async test
-    async def dummy(): 
+    async def dummy():
         return "test"
-    
+
     result = await run_with_timeout(dummy(), 1.0, "default")
     assert result == "test"
 
@@ -58,7 +62,10 @@ def test_communication_imports():
 def test_message_classes():
     """Test message classes can be imported."""
     from gaggle.core.communication.messages import (
-        AgentMessage, TaskAssignmentMessage, MessageType, MessagePriority
+        AgentMessage,
+        MessagePriority,
+        MessageType,
+        TaskAssignmentMessage,
     )
     assert AgentMessage is not None
     assert TaskAssignmentMessage is not None
@@ -67,13 +74,15 @@ def test_message_classes():
 
 def test_bus_classes():
     """Test bus classes can be imported."""
-    from gaggle.core.communication.bus import MessageBus, MessageRouter, MessageHandler
+    from gaggle.core.communication.bus import MessageBus
     bus = MessageBus()
     assert bus is not None
 
 def test_protocol_classes():
     """Test protocol classes can be imported."""
-    from gaggle.core.communication.protocols import CommunicationProtocol, ProtocolValidator
+    from gaggle.core.communication.protocols import (
+        CommunicationProtocol,
+    )
     protocol = CommunicationProtocol()
     assert protocol is not None
 
@@ -81,7 +90,13 @@ def test_protocol_classes():
 # Tools coverage
 def test_tools_imports():
     """Test tools module imports."""
-    from gaggle.tools import code_tools, github_tools, project_tools, review_tools, testing_tools
+    from gaggle.tools import (
+        code_tools,
+        github_tools,
+        project_tools,
+        review_tools,
+        testing_tools,
+    )
     assert code_tools is not None
     assert github_tools is not None
     assert project_tools is not None
@@ -90,13 +105,13 @@ def test_tools_imports():
 
 def test_project_tools_classes():
     """Test project tools classes."""
-    from gaggle.tools.project_tools import BacklogTool, MetricsTool, SprintBoardTool
+    from gaggle.tools.project_tools import BacklogTool
     backlog = BacklogTool()
     assert backlog is not None
 
 def test_code_tools_classes():
     """Test code tools classes."""
-    from gaggle.tools.code_tools import CodeAnalysisTool, CodeGenerationTool
+    from gaggle.tools.code_tools import CodeAnalysisTool
     analyzer = CodeAnalysisTool()
     assert analyzer is not None
 
@@ -108,18 +123,18 @@ def test_github_tools_classes():
 
 def test_review_tools_classes():
     """Test review tools classes."""
-    from gaggle.tools.review_tools import CodeReviewTool, ArchitectureReviewTool
+    from gaggle.tools.review_tools import CodeReviewTool
     review = CodeReviewTool()
     assert review is not None
 
 def test_testing_tools_classes():
     """Test testing tools classes."""
-    from gaggle.tools.testing_tools import TestingTool, TestPlanTool
+    from gaggle.tools.testing_tools import TestingTool
     testing = TestingTool()
     assert testing is not None
 
 
-# Memory modules coverage  
+# Memory modules coverage
 def test_memory_imports():
     """Test memory module imports."""
     from gaggle.core.memory import caching, compression, hierarchical, retrieval
@@ -130,8 +145,8 @@ def test_memory_imports():
 
 def test_memory_classes():
     """Test memory classes can be imported."""
-    from gaggle.core.memory.caching import PromptCache, CacheManager
-    from gaggle.core.memory.hierarchical import HierarchicalMemory, MemoryLayer
+    from gaggle.core.memory.caching import PromptCache
+    from gaggle.core.memory.hierarchical import HierarchicalMemory
     cache = PromptCache()
     memory = HierarchicalMemory()
     assert cache is not None
@@ -147,8 +162,8 @@ def test_state_imports():
 
 def test_state_classes():
     """Test state classes can be imported."""
-    from gaggle.core.state.context import AgentContext, ContextManager
-    from gaggle.core.state.machines import AgentStateMachine, StateTransition
+    from gaggle.core.state.context import AgentContext
+    from gaggle.core.state.machines import AgentStateMachine
     context_obj = AgentContext()
     machine = AgentStateMachine()
     assert context_obj is not None
@@ -162,8 +177,8 @@ def test_workflow_imports():
 
 def test_workflow_classes():
     """Test workflow classes can be imported."""
-    from gaggle.workflows.daily_standup import StandupManager, StandupMetrics
-    from gaggle.workflows.sprint_execution import SprintExecutor, ExecutionMetrics
+    from gaggle.workflows.daily_standup import StandupManager
+    from gaggle.workflows.sprint_execution import SprintExecutor
     standup = StandupManager()
     executor = SprintExecutor()
     assert standup is not None
@@ -173,7 +188,7 @@ def test_workflow_classes():
 # Agent coverage
 def test_agent_imports():
     """Test agent module imports."""
-    from gaggle.agents import base, architecture, coordination, implementation, qa
+    from gaggle.agents import architecture, base, coordination, implementation, qa
     assert base is not None
     assert architecture is not None
     assert coordination is not None
@@ -182,7 +197,7 @@ def test_agent_imports():
 
 def test_base_agent_classes():
     """Test base agent classes."""
-    from gaggle.agents.base import BaseAgent, AgentCapability
+    from gaggle.agents.base import BaseAgent
     agent = BaseAgent()
     assert agent is not None
 

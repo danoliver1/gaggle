@@ -2,16 +2,30 @@
 """Test script for comprehensive Pydantic validation across all models."""
 
 import sys
-from datetime import datetime, date
-from pydantic import ValidationError
+
 import pytest
+from pydantic import ValidationError
+
+from gaggle.config.models import AgentRole, ModelTier
+from gaggle.models.sprint import SprintMetrics, SprintModel
+from gaggle.models.story import (
+    AcceptanceCriteria,
+    StoryStatus,
+    UserStory,
+)
 
 # Import models
-from gaggle.models.task import Task, TaskDependency, TaskStatus, TaskType, TaskComplexity, TaskPriority
-from gaggle.models.story import UserStory, AcceptanceCriteria, StoryStatus, StoryPriority
-from gaggle.models.sprint import SprintModel, SprintMetrics, SprintStatus
-from gaggle.models.team import TeamMember, AgentAssignment, TeamConfiguration, AgentStatus
-from gaggle.config.models import AgentRole, ModelTier
+from gaggle.models.task import (
+    Task,
+    TaskDependency,
+    TaskStatus,
+    TaskType,
+)
+from gaggle.models.team import (
+    AgentStatus,
+    TeamConfiguration,
+    TeamMember,
+)
 
 
 class TestAcceptanceCriteriaValidation:
@@ -448,7 +462,7 @@ def run_validation_tests():
     """Run comprehensive validation tests."""
     print("🧪 Running Pydantic Validation Tests...")
     print("=" * 50)
-    
+
     test_classes = [
         TestAcceptanceCriteriaValidation,
         TestUserStoryValidation,
@@ -457,17 +471,17 @@ def run_validation_tests():
         TestSprintValidation,
         TestTeamValidation
     ]
-    
+
     total_tests = 0
     passed_tests = 0
-    
+
     for test_class in test_classes:
         class_name = test_class.__name__
         print(f"\n📋 Testing {class_name}:")
-        
+
         instance = test_class()
         methods = [method for method in dir(instance) if method.startswith('test_')]
-        
+
         for method_name in methods:
             total_tests += 1
             try:
@@ -477,13 +491,13 @@ def run_validation_tests():
                 print(f"  ✅ {method_name}")
             except Exception as e:
                 print(f"  ❌ {method_name}: {str(e)}")
-    
+
     print("\n" + "=" * 50)
-    print(f"📊 Validation Test Results:")
+    print("📊 Validation Test Results:")
     print(f"✅ Passed: {passed_tests}")
     print(f"❌ Failed: {total_tests - passed_tests}")
     print(f"📈 Success Rate: {(passed_tests / total_tests * 100):.1f}%")
-    
+
     if passed_tests == total_tests:
         print("🎉 All validation tests passed!")
         return True

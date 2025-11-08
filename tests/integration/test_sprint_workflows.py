@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from gaggle.workflows.sprint_planning import SprintPlanningWorkflow
 
 from gaggle.agents.architecture.tech_lead import TechLead
 from gaggle.agents.coordination.product_owner import ProductOwner
@@ -14,8 +13,12 @@ from gaggle.agents.implementation.frontend_dev import FrontendDeveloper
 from gaggle.agents.qa.qa_engineer import QAEngineer
 from gaggle.dashboards.sprint_metrics import SprintMetricsCollector
 from gaggle.integrations.github_api import GitHubAPIClient
-from gaggle.models.sprint import Sprint, Task, TaskStatus, UserStory
+from gaggle.models.sprint import Sprint
+from gaggle.models.story import UserStory
+from gaggle.models.task import TaskModel as Task
+from gaggle.models.task import TaskStatus
 from gaggle.workflows.sprint_execution import SprintExecutionWorkflow
+from gaggle.workflows.sprint_planning import SprintPlanningWorkflow
 
 
 @pytest.fixture
@@ -341,21 +344,20 @@ class TestEndToEndSprintWorkflow:
 
         with patch(
             "src.gaggle.workflows.sprint_execution.github_client"
-        ) as mock_github:
-            with patch(
-                "src.gaggle.workflows.sprint_execution.strands_adapter"
-            ) as mock_strands:
-                mock_github.sync_sprint_with_github = AsyncMock(
-                    return_value={"milestone": {"number": 1}}
-                )
-                mock_strands.create_agent.return_value = mock_agents[
-                    "FrontendDeveloper"
-                ]
-                mock_strands.execute_parallel_tasks = AsyncMock(
-                    return_value={"successful": [], "failed": []}
-                )
+        ) as mock_github, patch(
+            "src.gaggle.workflows.sprint_execution.strands_adapter"
+        ) as mock_strands:
+            mock_github.sync_sprint_with_github = AsyncMock(
+                return_value={"milestone": {"number": 1}}
+            )
+            mock_strands.create_agent.return_value = mock_agents[
+                "FrontendDeveloper"
+            ]
+            mock_strands.execute_parallel_tasks = AsyncMock(
+                return_value={"successful": [], "failed": []}
+            )
 
-                execution_result = await execution_workflow.execute_sprint(sprint)
+            execution_result = await execution_workflow.execute_sprint(sprint)
 
         # Verify end-to-end flow
         assert planning_result is not None
@@ -392,27 +394,26 @@ class TestEndToEndSprintWorkflow:
         for sprint in sprints:
             with patch(
                 "src.gaggle.workflows.sprint_execution.github_client"
-            ) as mock_github:
-                with patch(
-                    "src.gaggle.workflows.sprint_execution.strands_adapter"
-                ) as mock_strands:
-                    mock_github.sync_sprint_with_github = AsyncMock(
-                        return_value={"milestone": {"number": 1}}
-                    )
-                    mock_strands.create_agent.return_value = mock_agents[
-                        "FrontendDeveloper"
-                    ]
-                    mock_strands.execute_parallel_tasks = AsyncMock(
-                        return_value={
-                            "successful": [
-                                {"agent": "test", "result": {"result": "success"}}
-                            ],
-                            "failed": [],
-                        }
-                    )
+            ) as mock_github, patch(
+                "src.gaggle.workflows.sprint_execution.strands_adapter"
+            ) as mock_strands:
+                mock_github.sync_sprint_with_github = AsyncMock(
+                    return_value={"milestone": {"number": 1}}
+                )
+                mock_strands.create_agent.return_value = mock_agents[
+                    "FrontendDeveloper"
+                ]
+                mock_strands.execute_parallel_tasks = AsyncMock(
+                    return_value={
+                        "successful": [
+                            {"agent": "test", "result": {"result": "success"}}
+                        ],
+                        "failed": [],
+                    }
+                )
 
-                    result = await execution_workflow.execute_sprint(sprint)
-                    sprint_results.append(result)
+                result = await execution_workflow.execute_sprint(sprint)
+                sprint_results.append(result)
 
         # Test learning from multiple sprints
         from gaggle.learning.multi_sprint_optimizer import MultiSprintOptimizer

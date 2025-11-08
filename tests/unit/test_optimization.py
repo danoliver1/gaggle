@@ -11,8 +11,8 @@ from gaggle.learning.multi_sprint_optimizer import (
     SprintLearningEngine,
 )
 from gaggle.models.sprint import Sprint
-from gaggle.models.task import Task, TaskStatus  
 from gaggle.models.story import UserStory
+from gaggle.models.task import Task, TaskStatus
 from gaggle.optimization.cost_optimizer import (
     CachingOptimizer,
     CostOptimizationEngine,

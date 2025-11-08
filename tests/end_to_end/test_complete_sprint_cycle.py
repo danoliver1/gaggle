@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-# Test a complete sprint from inception to completion
-from gaggle.workflows.sprint_planning import SprintPlanningWorkflow
-
 from gaggle.dashboards.sprint_metrics import SprintMetricsCollector
 from gaggle.learning.multi_sprint_optimizer import MultiSprintOptimizer
 from gaggle.optimization.cost_optimizer import CostOptimizationEngine
 from gaggle.teams.custom_compositions import TeamCompositionManager
 from gaggle.workflows.sprint_execution import SprintExecutionWorkflow
+
+# Test a complete sprint from inception to completion
+from gaggle.workflows.sprint_planning import SprintPlanningWorkflow
 
 
 @pytest.fixture
@@ -136,66 +136,64 @@ class TestCompleteSprintCycle:
 
             with patch(
                 "src.gaggle.workflows.sprint_planning.strands_adapter"
-            ) as mock_planning_strands:
-                with patch(
-                    "src.gaggle.workflows.sprint_execution.strands_adapter"
-                ) as mock_execution_strands:
-                    with patch(
-                        "src.gaggle.workflows.sprint_execution.github_client"
-                    ) as mock_github:
+            ) as mock_planning_strands, patch(
+                "src.gaggle.workflows.sprint_execution.strands_adapter"
+            ) as mock_execution_strands, patch(
+                "src.gaggle.workflows.sprint_execution.github_client"
+            ) as mock_github:
 
-                        # Mock agent responses based on sprint progression
-                        self._setup_sprint_mocks(
-                            mock_planning_strands,
-                            mock_execution_strands,
-                            mock_github,
-                            sprint_number,
-                        )
+                # Mock agent responses based on sprint progression
+                self._setup_sprint_mocks(
+                    mock_planning_strands,
+                    mock_execution_strands,
+                    mock_github,
+                    sprint_number,
+                )
 
-                        # Sprint Planning
-                        planning_result = await self._execute_sprint_planning(
-                            planning_workflow,
-                            comprehensive_project_requirements,
-                            sprint_number,
-                            project_results["sprints_completed"],
-                        )
+                # Sprint Planning
+                planning_result = await self._execute_sprint_planning(
+                    planning_workflow,
+                    comprehensive_project_requirements,
+                    sprint_number,
+                    project_results["sprints_completed"],
+                )
 
-                        # Sprint Execution
-                        execution_result = await self._execute_sprint_execution(
-                            execution_workflow, planning_result["sprint"], sprint_number
-                        )
+                # Sprint Execution
+                execution_result = await self._execute_sprint_execution(
+                    execution_workflow, planning_result["sprint"], sprint_number
+                )
 
-                        # Metrics Collection
-                        sprint_metrics = await self._collect_sprint_metrics(
-                            metrics_collector, execution_result, sprint_number
-                        )
+                # Metrics Collection
+                sprint_metrics = await self._collect_sprint_metrics(
+                    metrics_collector, execution_result, sprint_number
+                )
 
-                        # Cost Analysis
-                        cost_analysis = await self._analyze_sprint_costs(
-                            cost_optimizer, planning_result["sprint"], sprint_metrics
-                        )
+                # Cost Analysis
+                cost_analysis = await self._analyze_sprint_costs(
+                    cost_optimizer, planning_result["sprint"], sprint_metrics
+                )
 
-                        sprint_summary = {
-                            "sprint_number": sprint_number,
-                            "planning_result": planning_result,
-                            "execution_result": execution_result,
-                            "metrics": sprint_metrics,
-                            "cost_analysis": cost_analysis,
-                            "completed_at": datetime.now().isoformat(),
-                        }
+                sprint_summary = {
+                    "sprint_number": sprint_number,
+                    "planning_result": planning_result,
+                    "execution_result": execution_result,
+                    "metrics": sprint_metrics,
+                    "cost_analysis": cost_analysis,
+                    "completed_at": datetime.now().isoformat(),
+                }
 
-                        project_results["sprints_completed"].append(sprint_summary)
-                        project_results["total_cost"] += cost_analysis["total_cost_usd"]
+                project_results["sprints_completed"].append(sprint_summary)
+                project_results["total_cost"] += cost_analysis["total_cost_usd"]
 
-                        # Learning and Optimization (after sprint 2)
-                        if sprint_number >= 2:
-                            await self._apply_multi_sprint_learning(
-                                multi_sprint_optimizer,
-                                team_manager,
-                                cost_optimizer,
-                                project_results,
-                                sprint_number,
-                            )
+                # Learning and Optimization (after sprint 2)
+                if sprint_number >= 2:
+                    await self._apply_multi_sprint_learning(
+                        multi_sprint_optimizer,
+                        team_manager,
+                        cost_optimizer,
+                        project_results,
+                        sprint_number,
+                    )
 
         # Phase 3: Final Project Analysis
         final_analysis = await self._generate_final_project_analysis(project_results)
@@ -666,24 +664,23 @@ class TestProductionReadinessScenarios:
 
             with patch(
                 "src.gaggle.workflows.sprint_execution.strands_adapter"
-            ) as mock_strands:
-                with patch(
-                    "src.gaggle.workflows.sprint_execution.github_client"
-                ) as mock_github:
-                    mock_strands.execute_parallel_tasks = AsyncMock(
-                        return_value={
-                            "successful": [
-                                {"agent": f"agent_{i}", "result": {"result": "success"}}
-                                for i in range(8)
-                            ],
-                            "failed": [],
-                        }
-                    )
-                    mock_github.sync_sprint_with_github = AsyncMock(
-                        return_value={"milestone": {"number": sprint_id}}
-                    )
+            ) as mock_strands, patch(
+                "src.gaggle.workflows.sprint_execution.github_client"
+            ) as mock_github:
+                mock_strands.execute_parallel_tasks = AsyncMock(
+                    return_value={
+                        "successful": [
+                            {"agent": f"agent_{i}", "result": {"result": "success"}}
+                            for i in range(8)
+                        ],
+                        "failed": [],
+                    }
+                )
+                mock_github.sync_sprint_with_github = AsyncMock(
+                    return_value={"milestone": {"number": sprint_id}}
+                )
 
-                    return await execution_workflow.execute_sprint(sprint)
+                return await execution_workflow.execute_sprint(sprint)
 
         # Run sprints concurrently
         start_time = datetime.now()
@@ -748,45 +745,44 @@ class TestProductionReadinessScenarios:
 
         with patch(
             "src.gaggle.workflows.sprint_execution.strands_adapter"
-        ) as mock_strands:
-            with patch(
-                "src.gaggle.workflows.sprint_execution.github_client"
-            ) as mock_github:
-                # Mock large scale execution
-                successful_tasks = [
-                    {
-                        "agent": f"enterprise_agent_{i}",
-                        "result": {"result": f"Enterprise task {i} completed"},
-                    }
-                    for i in range(85)  # 85% success rate
-                ]
-                failed_tasks = [
-                    {"agent": f"enterprise_agent_{i}", "error": "Temporary issue"}
-                    for i in range(15)  # 15% failure rate
-                ]
+        ) as mock_strands, patch(
+            "src.gaggle.workflows.sprint_execution.github_client"
+        ) as mock_github:
+            # Mock large scale execution
+            successful_tasks = [
+                {
+                    "agent": f"enterprise_agent_{i}",
+                    "result": {"result": f"Enterprise task {i} completed"},
+                }
+                for i in range(85)  # 85% success rate
+            ]
+            failed_tasks = [
+                {"agent": f"enterprise_agent_{i}", "error": "Temporary issue"}
+                for i in range(15)  # 15% failure rate
+            ]
 
-                mock_strands.execute_parallel_tasks = AsyncMock(
-                    return_value={
-                        "successful": successful_tasks,
-                        "failed": failed_tasks,
-                        "summary": {"total_tasks": 100, "success_rate": 85.0},
-                    }
-                )
+            mock_strands.execute_parallel_tasks = AsyncMock(
+                return_value={
+                    "successful": successful_tasks,
+                    "failed": failed_tasks,
+                    "summary": {"total_tasks": 100, "success_rate": 85.0},
+                }
+            )
 
-                mock_github.sync_sprint_with_github = AsyncMock(
-                    return_value={
-                        "milestone": {"number": 1},
-                        "user_story_issues": list(range(1, 21)),
-                    }
-                )
+            mock_github.sync_sprint_with_github = AsyncMock(
+                return_value={
+                    "milestone": {"number": 1},
+                    "user_story_issues": list(range(1, 21)),
+                }
+            )
 
-                result = await execution_workflow.execute_sprint(enterprise_sprint)
+            result = await execution_workflow.execute_sprint(enterprise_sprint)
 
-                # Verify enterprise scale handling
-                assert result["sprint_id"] == "SPRINT-ENTERPRISE-001"
-                assert result["execution_summary"]["success_rate"] == 85.0
-                assert len(result["execution_summary"]["failed_tasks"]) == 15
-                assert "github_integration" in result
+            # Verify enterprise scale handling
+            assert result["sprint_id"] == "SPRINT-ENTERPRISE-001"
+            assert result["execution_summary"]["success_rate"] == 85.0
+            assert len(result["execution_summary"]["failed_tasks"]) == 15
+            assert "github_integration" in result
 
     @pytest.mark.asyncio
     async def test_disaster_recovery_and_system_resilience(self):
@@ -833,49 +829,48 @@ class TestProductionReadinessScenarios:
         for scenario in failure_scenarios:
             with patch(
                 "src.gaggle.workflows.sprint_execution.github_client"
-            ) as mock_github:
-                with patch(
-                    "src.gaggle.workflows.sprint_execution.strands_adapter"
-                ) as mock_strands:
+            ) as mock_github, patch(
+                "src.gaggle.workflows.sprint_execution.strands_adapter"
+            ) as mock_strands:
 
-                    if scenario["github_fails"]:
-                        mock_github.sync_sprint_with_github = AsyncMock(
-                            side_effect=Exception("GitHub API unavailable")
-                        )
-                    else:
-                        mock_github.sync_sprint_with_github = AsyncMock(
-                            return_value={"milestone": {"number": 1}}
-                        )
+                if scenario["github_fails"]:
+                    mock_github.sync_sprint_with_github = AsyncMock(
+                        side_effect=Exception("GitHub API unavailable")
+                    )
+                else:
+                    mock_github.sync_sprint_with_github = AsyncMock(
+                        return_value={"milestone": {"number": 1}}
+                    )
 
-                    if scenario["strands_fails"]:
-                        mock_strands.execute_parallel_tasks = AsyncMock(
-                            side_effect=Exception("Strands framework unavailable")
-                        )
-                    else:
-                        mock_strands.execute_parallel_tasks = AsyncMock(
-                            return_value={
-                                "successful": [
-                                    {"agent": "test", "result": {"result": "success"}}
-                                ],
-                                "failed": [],
-                            }
-                        )
-
-                    try:
-                        result = await execution_workflow.execute_sprint(sprint)
-                        scenario_result = {
-                            "scenario": scenario["name"],
-                            "completed": True,
-                            "result": result,
+                if scenario["strands_fails"]:
+                    mock_strands.execute_parallel_tasks = AsyncMock(
+                        side_effect=Exception("Strands framework unavailable")
+                    )
+                else:
+                    mock_strands.execute_parallel_tasks = AsyncMock(
+                        return_value={
+                            "successful": [
+                                {"agent": "test", "result": {"result": "success"}}
+                            ],
+                            "failed": [],
                         }
-                    except Exception as e:
-                        scenario_result = {
-                            "scenario": scenario["name"],
-                            "completed": False,
-                            "error": str(e),
-                        }
+                    )
 
-                    results.append(scenario_result)
+                try:
+                    result = await execution_workflow.execute_sprint(sprint)
+                    scenario_result = {
+                        "scenario": scenario["name"],
+                        "completed": True,
+                        "result": result,
+                    }
+                except Exception as e:
+                    scenario_result = {
+                        "scenario": scenario["name"],
+                        "completed": False,
+                        "error": str(e),
+                    }
+
+                results.append(scenario_result)
 
         # Verify resilience expectations
         assert results[0]["completed"] == failure_scenarios[0]["expected_recovery"]

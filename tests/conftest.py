@@ -8,8 +8,8 @@ import pytest
 
 # Import models for fixtures
 from gaggle.models.sprint import Sprint
+from gaggle.models.story import UserStory
 from gaggle.models.task import Task, TaskStatus, TaskType
-from gaggle.models.story import UserStory, AcceptanceCriteria
 
 
 # Test environment setup
@@ -54,11 +54,11 @@ def sample_user_story():
         description="As a user, I want to authenticate securely",
         story_points=8,
     )
-    
+
     # Add acceptance criteria using the model method
     story.add_acceptance_criteria("User can register with email and password")
     story.add_acceptance_criteria("User can login with valid credentials")
-    
+
     return story
 
 
