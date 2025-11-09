@@ -4,6 +4,7 @@ import uuid
 from typing import Any
 
 from ...config.models import AgentRole
+from ...core.communication.messages import AgentMessage, MessageType
 from ...models.story import UserStory
 from ...models.task import Task, TaskComplexity, TaskStatus, TaskType
 from ...tools.code_tools import CodeAnalysisTool, CodeGenerationTool
@@ -103,6 +104,107 @@ class TechLead(ArchitectureAgent):
         if hasattr(self, "architecture_review_tool"):
             tools.append(self.architecture_review_tool)
         return tools
+
+    async def _process_message(self, message: AgentMessage) -> None:
+        """Process incoming messages specific to Tech Lead role."""
+        if message.message_type == MessageType.ARCHITECTURE_ANALYSIS_REQUEST:
+            await self._handle_architecture_analysis_request(message)
+        elif message.message_type == MessageType.TASK_BREAKDOWN_REQUEST:
+            await self._handle_task_breakdown_request(message)
+        elif message.message_type == MessageType.CODE_REVIEW_REQUEST:
+            await self._handle_code_review_request(message)
+        elif message.message_type == MessageType.COMPONENT_GENERATION_REQUEST:
+            await self._handle_component_generation_request(message)
+        else:
+            self.logger.warning(
+                f"Unhandled message type: {message.message_type.value}",
+                message_id=message.id,
+            )
+
+    async def _handle_architecture_analysis_request(self, message: AgentMessage) -> None:
+        """Handle architecture analysis request messages."""
+        stories_data = message.data.get("stories", [])
+        requirements = message.data.get("requirements", "")
+        
+        if stories_data:
+            stories = [UserStory(**story_data) for story_data in stories_data]
+            result = await self.analyze_architecture_requirements(stories, requirements)
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.ARCHITECTURE_ANALYSIS_RESPONSE,
+                data=result,
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_task_breakdown_request(self, message: AgentMessage) -> None:
+        """Handle task breakdown request messages."""
+        stories_data = message.data.get("stories", [])
+        
+        if stories_data:
+            stories = [UserStory(**story_data) for story_data in stories_data]
+            result = await self.break_down_stories_into_tasks(stories)
+            
+            # Convert tasks to serializable format
+            tasks_data = [
+                {
+                    "id": task.id,
+                    "title": task.title,
+                    "description": task.description,
+                    "task_type": task.task_type,
+                    "complexity": task.complexity,
+                    "estimated_hours": task.estimated_hours,
+                    "story_id": task.story_id,
+                }
+                for task in result
+            ]
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.TASK_BREAKDOWN_RESPONSE,
+                data={"tasks": tasks_data},
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_code_review_request(self, message: AgentMessage) -> None:
+        """Handle code review request messages."""
+        code_files = message.data.get("code_files", [])
+        review_criteria = message.data.get("review_criteria", [])
+        
+        result = await self.review_code(code_files, review_criteria)
+        
+        response = AgentMessage(
+            id=str(uuid.uuid4()),
+            sender=self.role,
+            recipient=message.sender,
+            message_type=MessageType.CODE_REVIEW_RESPONSE,
+            data=result,
+            correlation_id=message.id,
+        )
+        await self.send_message(response)
+
+    async def _handle_component_generation_request(self, message: AgentMessage) -> None:
+        """Handle component generation request messages."""
+        requirements = message.data.get("requirements", "")
+        component_type = message.data.get("component_type", "utility")
+        
+        result = await self.generate_reusable_utilities(requirements, component_type)
+        
+        response = AgentMessage(
+            id=str(uuid.uuid4()),
+            sender=self.role,
+            recipient=message.sender,
+            message_type=MessageType.COMPONENT_GENERATION_RESPONSE,
+            data=result,
+            correlation_id=message.id,
+        )
+        await self.send_message(response)
 
     async def analyze_technical_complexity(
         self, stories: list[UserStory]

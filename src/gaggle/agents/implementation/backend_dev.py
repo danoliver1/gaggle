@@ -1,8 +1,10 @@
 """Backend Developer agent implementation."""
 
+import uuid
 from typing import Any
 
 from ...config.models import AgentRole
+from ...core.communication.messages import AgentMessage, MessageType
 from ...models.task import TaskModel
 from ...tools.code_tools import CodeAnalysisTool, CodeGenerationTool
 from ...tools.github_tools import GitHubTool
@@ -89,6 +91,45 @@ class BackendDeveloper(ImplementationAgent):
         if hasattr(self, "github_tool"):
             tools.append(self.github_tool)
         return tools
+
+    async def _process_message(self, message: AgentMessage) -> None:
+        """Process incoming messages specific to Backend Developer role."""
+        if message.message_type == MessageType.TASK_ASSIGNMENT:
+            await self._handle_task_assignment(message)
+        elif message.message_type == MessageType.CODE_REVIEW:
+            await self._handle_code_review(message)
+        elif message.message_type == MessageType.COORDINATION_REQUEST:
+            await self._handle_coordination_request(message)
+        else:
+            self.logger.warning(
+                f"Unhandled message type: {message.message_type.value}",
+                message_id=message.id,
+            )
+
+    async def _handle_task_assignment(self, message: AgentMessage) -> None:
+        """Handle API implementation, database implementation, or service development requests."""
+        self.logger.info(
+            "Processing task assignment for backend development",
+            message_id=message.id,
+            task_type="backend"
+        )
+        # Implementation would handle specific backend tasks
+
+    async def _handle_code_review(self, message: AgentMessage) -> None:
+        """Handle backend code review requests."""
+        self.logger.info(
+            "Processing backend code review request",
+            message_id=message.id,
+        )
+        # Implementation would handle backend code reviews
+
+    async def _handle_coordination_request(self, message: AgentMessage) -> None:
+        """Handle general coordination requests."""
+        self.logger.info(
+            "Processing coordination request for backend team",
+            message_id=message.id,
+        )
+        # Implementation would handle coordination tasks
 
     async def implement_api_endpoint(
         self, task: TaskModel, endpoint_spec: dict[str, Any]

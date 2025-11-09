@@ -48,6 +48,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **All imports verified** - Test imports before claiming working code
 - **Real service testing** - Use actual credentials when available
 
+### Development Commands (CRITICAL)
+- **ALWAYS use uv** for all Python operations: `uv run python`, `uv run pytest`, `uv sync`, etc.
+- **Testing**: `uv run python -m pytest` (never plain `pytest`)
+- **Code execution**: `uv run python -c "code"` (never plain `python`)
+- **Package management**: `uv add`, `uv sync` (project uses uv.lock)
+
 ### Status Terminology
 - ✅ **"Architecture Implemented"** - Code structure complete
 - ✅ **"Proof of Concept Working"** - Basic functionality verified

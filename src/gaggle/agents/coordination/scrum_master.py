@@ -1,9 +1,11 @@
 """Scrum Master agent implementation."""
 
+import uuid
 from datetime import date, datetime
 from typing import Any
 
 from ...config.models import AgentRole
+from ...core.communication.messages import AgentMessage, MessageType
 from ...models.sprint import SprintModel
 from ...models.story import UserStory
 from ...models.team import TeamConfiguration
@@ -81,6 +83,129 @@ class ScrumMaster(CoordinationAgent):
             tools.append(self.blocker_tracker)
         return tools
 
+    async def _process_message(self, message: AgentMessage) -> None:
+        """Process incoming messages specific to Scrum Master role."""
+        if message.message_type == MessageType.SPRINT_PLANNING_REQUEST:
+            await self._handle_sprint_planning_request(message)
+        elif message.message_type == MessageType.DAILY_STANDUP_REQUEST:
+            await self._handle_daily_standup_request(message)
+        elif message.message_type == MessageType.SPRINT_REVIEW_FACILITATION_REQUEST:
+            await self._handle_sprint_review_request(message)
+        elif message.message_type == MessageType.RETROSPECTIVE_REQUEST:
+            await self._handle_retrospective_request(message)
+        elif message.message_type == MessageType.BLOCKER_REMOVAL_REQUEST:
+            await self._handle_blocker_removal_request(message)
+        else:
+            self.logger.warning(
+                f"Unhandled message type: {message.message_type.value}",
+                message_id=message.id,
+            )
+
+    async def _handle_sprint_planning_request(self, message: AgentMessage) -> None:
+        """Handle sprint planning request messages."""
+        team_config = message.data.get("team_config")
+        available_stories = message.data.get("available_stories", [])
+        duration_days = message.data.get("duration_days", 10)
+        
+        if team_config:
+            team = TeamConfiguration(**team_config)
+            stories = [UserStory(**story_data) for story_data in available_stories]
+            
+            result = await self.plan_sprint(team, stories, duration_days)
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.SPRINT_PLANNING_RESPONSE,
+                data=result,
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_daily_standup_request(self, message: AgentMessage) -> None:
+        """Handle daily standup request messages."""
+        sprint_data = message.data.get("sprint")
+        team_data = message.data.get("team_config")
+        
+        if sprint_data and team_data:
+            sprint = SprintModel(**sprint_data)
+            team = TeamConfiguration(**team_data)
+            
+            result = await self.facilitate_daily_standup(sprint, team)
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.DAILY_STANDUP_RESPONSE,
+                data=result,
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_sprint_review_request(self, message: AgentMessage) -> None:
+        """Handle sprint review facilitation request messages."""
+        sprint_data = message.data.get("sprint")
+        stakeholders = message.data.get("stakeholders", [])
+        
+        if sprint_data:
+            sprint = SprintModel(**sprint_data)
+            result = await self.facilitate_sprint_review(sprint, stakeholders)
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.SPRINT_REVIEW_FACILITATION_RESPONSE,
+                data=result,
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_retrospective_request(self, message: AgentMessage) -> None:
+        """Handle retrospective request messages."""
+        sprint_data = message.data.get("sprint")
+        team_data = message.data.get("team_config")
+        
+        if sprint_data and team_data:
+            sprint = SprintModel(**sprint_data)
+            team = TeamConfiguration(**team_data)
+            
+            result = await self.conduct_retrospective(sprint, team)
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.RETROSPECTIVE_RESPONSE,
+                data=result,
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_blocker_removal_request(self, message: AgentMessage) -> None:
+        """Handle blocker removal request messages."""
+        blocker_data = message.data.get("blocker")
+        task_data = message.data.get("task")
+        
+        if blocker_data:
+            result = await self.remove_impediment(
+                blocker_data.get("description", ""),
+                blocker_data.get("severity", "medium"),
+                task_data
+            )
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.BLOCKER_REMOVAL_RESPONSE,
+                data=result,
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
     async def facilitate_sprint_planning(
         self,
         stories: list[UserStory],
@@ -101,7 +226,7 @@ class ScrumMaster(CoordinationAgent):
 
         capacity_summary = "\n".join(
             [
-                f"- {role.value}: {count} team members"
+                f"- {role if isinstance(role, str) else role.value}: {count} team members"
                 for role, count in team_capacity.items()
             ]
         )
@@ -173,8 +298,8 @@ class ScrumMaster(CoordinationAgent):
         for member in team_config.members:
             status_info = {
                 "name": member.name,
-                "role": member.role.value,
-                "status": member.status.value,
+                "role": member.role if isinstance(member.role, str) else member.role.value,
+                "status": member.status if isinstance(member.status, str) else member.status.value,
                 "current_task": member.current_task_id,
                 "tasks_completed": member.tasks_completed,
             }
@@ -373,7 +498,7 @@ class ScrumMaster(CoordinationAgent):
     ) -> list[str]:
         """Select story IDs for the sprint based on planning."""
         # For now, select first few stories based on priority
-        selected = sorted(stories, key=lambda s: s.priority.value)[:5]
+        selected = sorted(stories, key=lambda s: s.priority if isinstance(s.priority, str) else s.priority.value)[:5]
         return [story.id for story in selected]
 
     def _estimate_velocity(

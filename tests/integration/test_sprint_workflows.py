@@ -76,44 +76,43 @@ def sample_project_requirements():
 @pytest.fixture
 def sample_backlog():
     """Sample product backlog for testing."""
-    return [
-        UserStory(
-            id="US-001",
-            title="User Registration",
-            description="As a user, I want to create an account",
-            acceptance_criteria=[
-                "User can enter email and password",
-                "System validates input",
-                "Confirmation email is sent",
-            ],
-            priority="high",
-            story_points=5,
-        ),
-        UserStory(
-            id="US-002",
-            title="User Login",
-            description="As a user, I want to log into my account",
-            acceptance_criteria=[
-                "User can enter credentials",
-                "System authenticates user",
-                "User is redirected to dashboard",
-            ],
-            priority="high",
-            story_points=3,
-        ),
-        UserStory(
-            id="US-003",
-            title="Product Search",
-            description="As a user, I want to search for products",
-            acceptance_criteria=[
-                "Search box is available",
-                "Results are filtered and sorted",
-                "Pagination works correctly",
-            ],
-            priority="medium",
-            story_points=8,
-        ),
-    ]
+    # Story 1: User Registration
+    story1 = UserStory(
+        id="US-001",
+        title="User Registration",
+        description="As a user, I want to create an account",
+        priority="high",
+        story_points=5,
+    )
+    story1.add_acceptance_criteria("User can enter email and password")
+    story1.add_acceptance_criteria("System validates input")
+    story1.add_acceptance_criteria("Confirmation email is sent")
+    
+    # Story 2: User Login
+    story2 = UserStory(
+        id="US-002",
+        title="User Login",
+        description="As a user, I want to log into my account",
+        priority="high",
+        story_points=3,
+    )
+    story2.add_acceptance_criteria("User can enter credentials")
+    story2.add_acceptance_criteria("System authenticates user")
+    story2.add_acceptance_criteria("User is redirected to dashboard")
+    
+    # Story 3: Product Search
+    story3 = UserStory(
+        id="US-003",
+        title="Product Search",
+        description="As a user, I want to search for products",
+        priority="medium",
+        story_points=8,
+    )
+    story3.add_acceptance_criteria("Search box is available")
+    story3.add_acceptance_criteria("Results are filtered and sorted")
+    story3.add_acceptance_criteria("Pagination works correctly")
+    
+    return [story1, story2, story3]
 
 
 class TestSprintPlanningWorkflow:
@@ -449,33 +448,23 @@ class TestSprintMetricsIntegration:
     async def test_metrics_collection_during_sprint_execution(self, mock_agents):
         """Test that metrics are properly collected during sprint execution."""
 
+        # Create user story with proper acceptance criteria
+        test_story = UserStory(
+            id="US-001",
+            title="Test Story",
+            description="Test story for metrics",
+            priority="high",
+            story_points=5,
+        )
+        test_story.add_acceptance_criteria("AC1")
+        
         sprint = Sprint(
             id="SPRINT-001",
             name="Metrics Test Sprint",
             goal="Test metrics collection",
             start_date=datetime.now(),
             end_date=datetime.now() + timedelta(weeks=2),
-            user_stories=[
-                UserStory(
-                    id="US-001",
-                    title="Test Story",
-                    description="Test story for metrics",
-                    acceptance_criteria=["AC1"],
-                    priority="high",
-                    story_points=5,
-                    tasks=[
-                        Task(
-                            id="TASK-001",
-                            title="Test Task",
-                            description="Test task",
-                            status=TaskStatus.TODO,
-                            assigned_to="dev",
-                            estimated_hours=4,
-                            user_story_id="US-001",
-                        )
-                    ],
-                )
-            ],
+            user_stories=[test_story],
             team_velocity=20,
         )
 

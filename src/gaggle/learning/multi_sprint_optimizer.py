@@ -127,10 +127,15 @@ class SprintLearningEngine:
 
         learnings = []
 
+        # Calculate duration in weeks
+        duration_weeks = 2  # Default duration
+        if sprint.start_date and sprint.end_date:
+            duration_weeks = (sprint.end_date - sprint.start_date).days / 7
+        
         # High velocity learning
         if (
             metrics.velocity
-            > metrics.planned_story_points / sprint.duration_weeks * 1.2
+            > metrics.planned_story_points / duration_weeks * 1.2
         ):
             learnings.append(
                 SprintLearning(
@@ -143,9 +148,9 @@ class SprintLearningEngine:
                     evidence={
                         "actual_velocity": metrics.velocity,
                         "planned_capacity": metrics.planned_story_points
-                        / sprint.duration_weeks,
+                        / duration_weeks,
                         "improvement_ratio": metrics.velocity
-                        / (metrics.planned_story_points / sprint.duration_weeks),
+                        / (metrics.planned_story_points / duration_weeks),
                     },
                     created_at=datetime.now(),
                 )
@@ -154,7 +159,7 @@ class SprintLearningEngine:
         # Low velocity learning
         elif (
             metrics.velocity
-            < metrics.planned_story_points / sprint.duration_weeks * 0.8
+            < metrics.planned_story_points / duration_weeks * 0.8
         ):
             learnings.append(
                 SprintLearning(
@@ -167,9 +172,9 @@ class SprintLearningEngine:
                     evidence={
                         "actual_velocity": metrics.velocity,
                         "planned_capacity": metrics.planned_story_points
-                        / sprint.duration_weeks,
+                        / duration_weeks,
                         "velocity_gap": (
-                            metrics.planned_story_points / sprint.duration_weeks
+                            metrics.planned_story_points / duration_weeks
                         )
                         - metrics.velocity,
                     },

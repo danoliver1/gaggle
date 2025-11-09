@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..config.models import AgentRole
-from .story import UserStory
+from .story import UserStory, StoryStatus
 from .task import Task
 
 

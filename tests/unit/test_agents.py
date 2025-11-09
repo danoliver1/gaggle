@@ -1,6 +1,6 @@
 """Unit tests for Gaggle agents."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -23,11 +23,7 @@ def mock_strands_agent():
     """Mock Strands agent for testing."""
     agent = Mock()
     agent.aexecute = AsyncMock(
-        return_value={
-            "result": "Mock agent response",
-            "token_usage": {"input_tokens": 100, "output_tokens": 200},
-            "model_id": "mock-model",
-        }
+        return_value="Mock agent response with As a user story patterns for parsing"
     )
     return agent
 
@@ -35,18 +31,22 @@ def mock_strands_agent():
 @pytest.fixture
 def sample_user_story():
     """Sample user story for testing."""
-    return UserStory(
+    from src.gaggle.models.story import AcceptanceCriteria
+    
+    story = UserStory(
         id="US-001",
         title="User Registration",
         description="As a user, I want to register for an account",
-        acceptance_criteria=[
-            "User can enter email and password",
-            "System validates input",
-            "User receives confirmation email",
-        ],
         priority="high",
         story_points=5,
     )
+    
+    # Add acceptance criteria using the method
+    story.add_acceptance_criteria("User can enter email and password")
+    story.add_acceptance_criteria("System validates input")
+    story.add_acceptance_criteria("User receives confirmation email")
+    
+    return story
 
 
 @pytest.fixture
@@ -56,6 +56,7 @@ def sample_task():
         id="TASK-001",
         title="Implement registration form",
         description="Create React component for user registration",
+        task_type="frontend",
         status=TaskStatus.TODO,
         assigned_to="frontend_dev",
         estimated_hours=4,
@@ -70,8 +71,8 @@ def sample_sprint(sample_user_story):
         id="SPRINT-001",
         name="Authentication Sprint",
         goal="Implement user authentication features",
-        start_date=datetime.now(),
-        end_date=datetime.now(),
+        start_date=datetime.now().date(),
+        end_date=(datetime.now() + timedelta(days=14)).date(),
         user_stories=[sample_user_story],
         team_velocity=20,
     )
@@ -84,50 +85,52 @@ class TestProductOwner:
         """Test Product Owner initialization."""
         po = ProductOwner()
         assert po.role == AgentRole.PRODUCT_OWNER
-        assert po.agent is not None
+        assert po._agent is not None
         assert po.logger is not None
 
     @pytest.mark.asyncio
     async def test_create_user_stories(self, mock_strands_agent):
         """Test user story creation."""
         po = ProductOwner()
-        po.agent = mock_strands_agent
+        po._agent = mock_strands_agent
 
-        features = ["User authentication", "Dashboard view"]
-        project_context = {"domain": "e-commerce", "users": "customers"}
+        product_idea = "E-commerce platform with user authentication and dashboard view"
+        clarifications = {"domain": "e-commerce", "users": "customers"}
 
-        result = await po.create_user_stories(features, project_context)
+        result = await po.create_user_stories(product_idea, clarifications)
 
-        assert "user_stories" in result
-        assert "total_story_points" in result
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert isinstance(result[0], UserStory)
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
     async def test_prioritize_backlog(self, mock_strands_agent, sample_user_story):
         """Test backlog prioritization."""
         po = ProductOwner()
-        po.agent = mock_strands_agent
+        po._agent = mock_strands_agent
 
         backlog = [sample_user_story]
-        criteria = {"business_value": 0.4, "risk": 0.3, "effort": 0.3}
 
-        result = await po.prioritize_backlog(backlog, criteria)
+        result = await po.prioritize_backlog(backlog)
 
-        assert "prioritized_backlog" in result
-        assert "prioritization_rationale" in result
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert isinstance(result[0], UserStory)
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
     async def test_review_sprint_deliverables(self, mock_strands_agent, sample_sprint):
         """Test sprint deliverable review."""
         po = ProductOwner()
-        po.agent = mock_strands_agent
+        po._agent = mock_strands_agent
 
-        result = await po.review_sprint_deliverables(sample_sprint)
+        completed_stories = sample_sprint.user_stories
+        result = await po.review_sprint_deliverables(sample_sprint, completed_stories)
 
-        assert "review_summary" in result
-        assert "acceptance_status" in result
-        assert "feedback" in result
+        assert isinstance(result, dict)
+        assert "sprint_id" in result
+        assert "review_decisions" in result
         assert mock_strands_agent.aexecute.called
 
 
@@ -138,40 +141,40 @@ class TestScrumMaster:
         """Test Scrum Master initialization."""
         sm = ScrumMaster()
         assert sm.role == AgentRole.SCRUM_MASTER
-        assert sm.agent is not None
+        assert sm._agent is not None
 
     @pytest.mark.asyncio
     async def test_plan_sprint(self, mock_strands_agent, sample_user_story):
         """Test sprint planning."""
         sm = ScrumMaster()
-        sm.agent = mock_strands_agent
+        sm._agent = mock_strands_agent
 
         backlog = [sample_user_story]
-        team_velocity = 20
+        from gaggle.models.team import TeamConfiguration
+        
+        team_config = TeamConfiguration.create_default_team()
 
-        result = await sm.plan_sprint(backlog, team_velocity)
+        result = await sm.facilitate_sprint_planning(backlog, team_config)
 
-        assert "sprint_plan" in result
+        assert "sprint_goal" in result
         assert "selected_stories" in result
-        assert "capacity_analysis" in result
+        assert "estimated_velocity" in result
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
     async def test_facilitate_daily_standup(self, mock_strands_agent, sample_sprint):
         """Test daily standup facilitation."""
         sm = ScrumMaster()
-        sm.agent = mock_strands_agent
+        sm._agent = mock_strands_agent
 
-        team_updates = {
-            "frontend_dev": "Completed login form",
-            "backend_dev": "Working on authentication API",
-        }
+        from gaggle.models.team import TeamConfiguration
+        team_config = TeamConfiguration.create_default_team()
 
-        result = await sm.facilitate_daily_standup(sample_sprint, team_updates)
+        result = await sm.facilitate_daily_standup(sample_sprint, team_config)
 
-        assert "standup_summary" in result
-        assert "blockers" in result
+        assert "summary" in result
         assert "action_items" in result
+        assert "sprint_id" in result
         assert mock_strands_agent.aexecute.called
 
 
@@ -182,7 +185,7 @@ class TestTechLead:
         """Test Tech Lead initialization."""
         tl = TechLead()
         assert tl.role == AgentRole.TECH_LEAD
-        assert tl.agent is not None
+        assert tl._agent is not None
 
     @pytest.mark.asyncio
     async def test_analyze_architecture_requirements(
@@ -190,53 +193,46 @@ class TestTechLead:
     ):
         """Test architecture analysis."""
         tl = TechLead()
-        tl.agent = mock_strands_agent
+        tl._agent = mock_strands_agent
 
         user_stories = [sample_user_story]
         project_context = {"tech_stack": "React/Node.js", "scale": "medium"}
 
-        result = await tl.analyze_architecture_requirements(
-            user_stories, project_context
-        )
+        result = await tl.analyze_technical_complexity(user_stories)
 
-        assert "architecture_requirements" in result
-        assert "component_breakdown" in result
-        assert "technical_decisions" in result
+        assert "analysis_summary" in result
+        assert "complexity_scores" in result
+        assert "reusable_components" in result
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
-    async def test_generate_reusable_utilities(self, mock_strands_agent):
+    async def test_generate_reusable_utilities(self, mock_strands_agent, sample_user_story):
         """Test reusable utility generation."""
         tl = TechLead()
-        tl.agent = mock_strands_agent
+        tl._agent = mock_strands_agent
 
-        architecture_requirements = {
-            "patterns": ["authentication", "validation"],
-            "tech_stack": "React/Node.js",
-        }
+        user_stories = [sample_user_story]
 
-        result = await tl.generate_reusable_utilities(architecture_requirements)
+        result = await tl.generate_reusable_components(user_stories)
 
-        assert "utilities" in result
-        assert "documentation" in result
+        assert "components" in result
+        assert "usage_instructions" in result
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
     async def test_review_code(self, mock_strands_agent, sample_task):
         """Test code review."""
         tl = TechLead()
-        tl.agent = mock_strands_agent
+        tl._agent = mock_strands_agent
 
-        code_changes = {
-            "files": ["src/components/LoginForm.jsx"],
-            "diff": "mock diff content",
-        }
+        code_files = ["src/components/LoginForm.jsx"]
+        context = "Login form implementation for authentication feature"
 
-        result = await tl.review_code(sample_task, code_changes)
+        result = await tl.review_code_architecture(code_files, context)
 
-        assert "review_status" in result
-        assert "feedback" in result
-        assert "quality_score" in result
+        assert "review_summary" in result
+        assert "assessment" in result
+        assert "recommendations" in result
         assert mock_strands_agent.aexecute.called
 
 
@@ -246,14 +242,14 @@ class TestFrontendDeveloper:
     def test_init(self):
         """Test Frontend Developer initialization."""
         fe_dev = FrontendDeveloper()
-        assert fe_dev.role == AgentRole.FRONTEND_DEVELOPER
-        assert fe_dev.agent is not None
+        assert fe_dev.role == AgentRole.FRONTEND_DEV
+        assert fe_dev._agent is not None
 
     @pytest.mark.asyncio
     async def test_implement_ui_component(self, mock_strands_agent, sample_task):
         """Test UI component implementation."""
         fe_dev = FrontendDeveloper()
-        fe_dev.agent = mock_strands_agent
+        fe_dev._agent = mock_strands_agent
 
         design_specs = {
             "component_type": "form",
@@ -263,16 +259,16 @@ class TestFrontendDeveloper:
 
         result = await fe_dev.implement_ui_component(sample_task, design_specs)
 
-        assert "component_code" in result
-        assert "test_code" in result
-        assert "documentation" in result
+        assert "component_implementation" in result
+        assert "generated_code" in result
+        assert "files_created" in result
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
     async def test_integrate_with_api(self, mock_strands_agent, sample_task):
         """Test API integration."""
         fe_dev = FrontendDeveloper()
-        fe_dev.agent = mock_strands_agent
+        fe_dev._agent = mock_strands_agent
 
         api_specs = {
             "endpoints": ["/api/auth/login"],
@@ -282,9 +278,9 @@ class TestFrontendDeveloper:
 
         result = await fe_dev.integrate_with_api(sample_task, api_specs)
 
-        assert "integration_code" in result
-        assert "error_handling" in result
-        assert "api_client" in result
+        assert "integration_implementation" in result
+        assert "error_handling_implemented" in result
+        assert "api_client_created" in result
         assert mock_strands_agent.aexecute.called
 
 
@@ -294,14 +290,14 @@ class TestBackendDeveloper:
     def test_init(self):
         """Test Backend Developer initialization."""
         be_dev = BackendDeveloper()
-        assert be_dev.role == AgentRole.BACKEND_DEVELOPER
-        assert be_dev.agent is not None
+        assert be_dev.role == AgentRole.BACKEND_DEV
+        assert be_dev._agent is not None
 
     @pytest.mark.asyncio
     async def test_implement_api_endpoint(self, mock_strands_agent, sample_task):
         """Test API endpoint implementation."""
         be_dev = BackendDeveloper()
-        be_dev.agent = mock_strands_agent
+        be_dev._agent = mock_strands_agent
 
         endpoint_specs = {
             "path": "/api/auth/login",
@@ -312,16 +308,16 @@ class TestBackendDeveloper:
 
         result = await be_dev.implement_api_endpoint(sample_task, endpoint_specs)
 
-        assert "endpoint_code" in result
-        assert "validation_logic" in result
-        assert "test_cases" in result
+        assert "endpoint_implementation" in result
+        assert "generated_code" in result
+        assert "files_created" in result
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
     async def test_implement_database_layer(self, mock_strands_agent, sample_task):
         """Test database layer implementation."""
         be_dev = BackendDeveloper()
-        be_dev.agent = mock_strands_agent
+        be_dev._agent = mock_strands_agent
 
         data_models = {
             "User": {
@@ -332,9 +328,9 @@ class TestBackendDeveloper:
 
         result = await be_dev.implement_database_layer(sample_task, data_models)
 
-        assert "model_code" in result
-        assert "migration_scripts" in result
-        assert "query_methods" in result
+        assert "database_implementation" in result
+        assert "migrations_created" in result
+        assert "entities_created" in result
         assert mock_strands_agent.aexecute.called
 
 
@@ -345,13 +341,13 @@ class TestQAEngineer:
         """Test QA Engineer initialization."""
         qa = QAEngineer()
         assert qa.role == AgentRole.QA_ENGINEER
-        assert qa.agent is not None
+        assert qa._agent is not None
 
     @pytest.mark.asyncio
     async def test_create_test_plan(self, mock_strands_agent, sample_user_story):
         """Test test plan creation."""
         qa = QAEngineer()
-        qa.agent = mock_strands_agent
+        qa._agent = mock_strands_agent
 
         implementation_details = {
             "components": ["LoginForm", "AuthAPI"],
@@ -362,15 +358,15 @@ class TestQAEngineer:
         result = await qa.create_test_plan(sample_user_story, implementation_details)
 
         assert "test_plan" in result
-        assert "test_cases" in result
-        assert "coverage_analysis" in result
+        assert "manual_test_cases" in result
+        assert "automation_candidates" in result
         assert mock_strands_agent.aexecute.called
 
     @pytest.mark.asyncio
     async def test_execute_functional_testing(self, mock_strands_agent, sample_task):
         """Test functional testing execution."""
         qa = QAEngineer()
-        qa.agent = mock_strands_agent
+        qa._agent = mock_strands_agent
 
         test_scenarios = [
             {
@@ -386,8 +382,8 @@ class TestQAEngineer:
         result = await qa.execute_functional_testing(sample_task, test_scenarios)
 
         assert "test_results" in result
-        assert "passed_tests" in result
-        assert "failed_tests" in result
+        assert "pass_rate" in result
+        assert "scenarios_tested" in result
         assert "defects_found" in result
         assert mock_strands_agent.aexecute.called
 
@@ -401,20 +397,18 @@ class TestAgentIntegration:
         po = ProductOwner()
         tl = TechLead()
 
-        po.agent = mock_strands_agent
-        tl.agent = mock_strands_agent
+        po._agent = mock_strands_agent
+        tl._agent = mock_strands_agent
 
         # Product Owner creates stories
-        features = ["User authentication"]
+        product_idea = "User authentication system"
         project_context = {"domain": "web app"}
 
-        po_result = await po.create_user_stories(features, project_context)
+        po_result = await po.create_user_stories(product_idea, project_context)
 
         # Tech Lead analyzes and breaks down
-        user_stories = po_result.get("user_stories", [])
-        arch_result = await tl.analyze_architecture_requirements(
-            user_stories, project_context
-        )
+        user_stories = po_result if isinstance(po_result, list) else []
+        arch_result = await tl.analyze_technical_complexity(user_stories)
 
         assert po_result is not None
         assert arch_result is not None
@@ -426,17 +420,18 @@ class TestAgentIntegration:
         fe_dev = FrontendDeveloper()
         tl = TechLead()
 
-        fe_dev.agent = mock_strands_agent
-        tl.agent = mock_strands_agent
+        fe_dev._agent = mock_strands_agent
+        tl._agent = mock_strands_agent
 
         # Frontend developer implements
         design_specs = {"component_type": "form"}
         dev_result = await fe_dev.implement_ui_component(sample_task, design_specs)
 
         # Tech Lead reviews
-        code_changes = {"files": ["LoginForm.jsx"], "diff": "mock diff"}
-        review_result = await tl.review_code(sample_task, code_changes)
+        code_files = ["LoginForm.jsx"]
+        context = "Login form implementation for authentication feature"
+        review_result = await tl.review_code_architecture(code_files, context)
 
         assert dev_result is not None
         assert review_result is not None
-        assert "review_status" in review_result
+        assert "assessment" in review_result

@@ -1,8 +1,10 @@
 """QA Engineer agent implementation."""
 
+import uuid
 from typing import Any
 
 from ...config.models import AgentRole
+from ...core.communication.messages import AgentMessage, MessageType
 from ...models.story import UserStory
 from ...models.task import TaskModel
 from ...tools.code_tools import CodeAnalysisTool
@@ -87,6 +89,45 @@ class QAEngineer(QualityAssuranceAgent):
         if hasattr(self, "github_tool"):
             tools.append(self.github_tool)
         return tools
+
+    async def _process_message(self, message: AgentMessage) -> None:
+        """Process incoming messages specific to QA Engineer role."""
+        if message.message_type == MessageType.TASK_ASSIGNMENT:
+            await self._handle_task_assignment(message)
+        elif message.message_type == MessageType.QUALITY_REPORT:
+            await self._handle_quality_report(message)
+        elif message.message_type == MessageType.COORDINATION_REQUEST:
+            await self._handle_coordination_request(message)
+        else:
+            self.logger.warning(
+                f"Unhandled message type: {message.message_type.value}",
+                message_id=message.id,
+            )
+
+    async def _handle_task_assignment(self, message: AgentMessage) -> None:
+        """Handle test creation, test execution, or bug report requests."""
+        self.logger.info(
+            "Processing task assignment for QA engineering",
+            message_id=message.id,
+            task_type="qa"
+        )
+        # Implementation would handle specific QA tasks
+
+    async def _handle_quality_report(self, message: AgentMessage) -> None:
+        """Handle quality report requests."""
+        self.logger.info(
+            "Processing quality report request",
+            message_id=message.id,
+        )
+        # Implementation would handle quality reports
+
+    async def _handle_coordination_request(self, message: AgentMessage) -> None:
+        """Handle general coordination requests."""
+        self.logger.info(
+            "Processing coordination request for QA team",
+            message_id=message.id,
+        )
+        # Implementation would handle coordination tasks
 
     async def create_test_plan(
         self, user_story: UserStory, testing_scope: dict[str, Any]
@@ -199,11 +240,9 @@ class QAEngineer(QualityAssuranceAgent):
         # Execute testing using testing tool
         test_results = await self.testing_tool.execute(
             "run_functional_tests",
-            {
-                "scenarios": test_scenarios,
-                "capture_evidence": True,
-                "detailed_logging": True,
-            },
+            scenarios=test_scenarios,
+            capture_evidence=True,
+            detailed_logging=True,
         )
 
         # Log test execution

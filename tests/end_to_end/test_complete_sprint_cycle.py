@@ -382,22 +382,11 @@ class TestCompleteSprintCycle:
                 id=story_id,
                 title=f"Story {story_id}",
                 description=f"Implementation for {story_id}",
-                acceptance_criteria=[f"AC1 for {story_id}", f"AC2 for {story_id}"],
                 priority="high",
                 story_points=5,
-                tasks=[
-                    Task(
-                        id=f"{story_id}-TASK-{i}",
-                        title=f"Task {i} for {story_id}",
-                        description=f"Implementation task {i}",
-                        status=TaskStatus.TODO,
-                        assigned_to=f"developer_{i % 3}",
-                        estimated_hours=4,
-                        user_story_id=story_id,
-                    )
-                    for i in range(1, 3)  # 2 tasks per story
-                ],
             )
+            user_story.add_acceptance_criteria(f"AC1 for {story_id}")
+            user_story.add_acceptance_criteria(f"AC2 for {story_id}")
             sprint.user_stories.append(user_story)
 
         return await execution_workflow.execute_sprint(sprint)
@@ -724,11 +713,12 @@ class TestProductionReadinessScenarios:
                 id=f"US-{story_num:03d}",
                 title=f"Enterprise Feature {story_num}",
                 description="Large scale feature implementation",
-                acceptance_criteria=[f"AC{i}" for i in range(1, 6)],
                 priority="high" if story_num <= 10 else "medium",
                 story_points=8,
-                tasks=tasks,
             )
+            # Add acceptance criteria using the method
+            for i in range(1, 6):
+                story.add_acceptance_criteria(f"AC{i}")
             user_stories.append(story)
 
         enterprise_sprint = Sprint(

@@ -390,11 +390,17 @@ class CostOptimizationEngine:
     async def analyze_sprint_costs(self, sprint: Sprint) -> CostMetrics:
         """Analyze costs for a sprint."""
 
-        # Gather all tasks from user stories
+        # Gather all tasks from user stories and sprint level
         all_tasks = []
+        
+        # Get tasks from user stories
         for story in sprint.user_stories:
             if hasattr(story, "tasks") and story.tasks:
                 all_tasks.extend(story.tasks)
+        
+        # Get tasks from sprint level
+        if hasattr(sprint, "tasks") and sprint.tasks:
+            all_tasks.extend(sprint.tasks)
 
         # Calculate estimated token usage by role
         tokens_by_role = self._estimate_token_usage_by_role(all_tasks)
@@ -462,9 +468,9 @@ class CostOptimizationEngine:
                 AgentRole.PRODUCT_OWNER: 1200,
                 AgentRole.SCRUM_MASTER: 800,
                 AgentRole.TECH_LEAD: 2500,
-                AgentRole.FRONTEND_DEVELOPER: 2000,
-                AgentRole.BACKEND_DEVELOPER: 2200,
-                AgentRole.FULLSTACK_DEVELOPER: 2800,
+                AgentRole.FRONTEND_DEV: 2000,
+                AgentRole.BACKEND_DEV: 2200,
+                AgentRole.FULLSTACK_DEV: 2800,
                 AgentRole.QA_ENGINEER: 1800,
             }
 

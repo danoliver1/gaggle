@@ -253,7 +253,7 @@ class SprintMetricsCollector:
             [
                 t
                 for t in sprint.tasks
-                if t.task_type.value in ["frontend", "backend", "fullstack"]
+                if (t.task_type if isinstance(t.task_type, str) else t.task_type.value) in ["frontend", "backend", "fullstack"]
             ]
         )
         parallel_tasks = min(3, total_dev_tasks)  # Assuming 3 developers

@@ -3,10 +3,12 @@
 import asyncio
 import os
 from datetime import datetime, timedelta
+from unittest.mock import Mock
 
 import pytest
 
 # Import models for fixtures
+from gaggle.agents.base import AgentContext
 from gaggle.models.sprint import Sprint
 from gaggle.models.story import UserStory
 from gaggle.models.task import Task, TaskStatus, TaskType
@@ -73,4 +75,48 @@ def sample_sprint(sample_user_story):
         end_date=datetime.now() + timedelta(weeks=2),
         user_stories=[sample_user_story],
         team_velocity=25,
+    )
+
+
+@pytest.fixture
+def agent_context():
+    """Create a mock agent context for testing."""
+    return AgentContext(sprint_id="TEST-SPRINT-001")
+
+
+@pytest.fixture
+def mock_anthropic_response():
+    """Create a mock response from Anthropic API."""
+    return {
+        "result": "Mock agent analysis response with detailed insights about the requirements.",
+        "token_usage": {"input_tokens": 100, "output_tokens": 200},
+        "model_id": "claude-3-haiku-20240307",
+    }
+
+
+@pytest.fixture
+def sample_user_stories():
+    """Create multiple sample user stories for testing."""
+    stories = []
+    
+    for i in range(3):
+        story = UserStory(
+            id=f"US-00{i+1}",
+            title=f"User Story {i+1}",
+            description=f"As a user, I want feature {i+1}",
+            story_points=3 + i,
+        )
+        story.add_acceptance_criteria(f"Acceptance criteria {i+1}")
+        stories.append(story)
+    
+    return stories
+
+
+@pytest.fixture
+def sprint(sample_user_stories):
+    """Create a sprint fixture for testing."""
+    return Sprint(
+        id="SPRINT-TEST-001",
+        goal="Test sprint goal",
+        user_stories=sample_user_stories,
     )

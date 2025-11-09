@@ -4,6 +4,7 @@ import uuid
 from typing import Any
 
 from ...config.models import AgentRole
+from ...core.communication.messages import AgentMessage, MessageType
 from ...models.sprint import SprintModel
 from ...models.story import StoryPriority, StoryStatus, UserStory
 from ...tools.github_tools import GitHubTool
@@ -74,6 +75,127 @@ class ProductOwner(CoordinationAgent):
         if hasattr(self, "github_tool"):
             tools.append(self.github_tool)
         return tools
+
+    async def _process_message(self, message: AgentMessage) -> None:
+        """Process incoming messages specific to Product Owner role."""
+        if message.message_type == MessageType.REQUIREMENT_ANALYSIS_REQUEST:
+            # Handle requirement analysis requests
+            await self._handle_requirement_analysis_request(message)
+        elif message.message_type == MessageType.STORY_CREATION_REQUEST:
+            # Handle story creation requests
+            await self._handle_story_creation_request(message)
+        elif message.message_type == MessageType.BACKLOG_PRIORITIZATION_REQUEST:
+            # Handle backlog prioritization requests
+            await self._handle_backlog_prioritization_request(message)
+        elif message.message_type == MessageType.SPRINT_REVIEW_REQUEST:
+            # Handle sprint review requests
+            await self._handle_sprint_review_request(message)
+        else:
+            self.logger.warning(
+                f"Unhandled message type: {message.message_type.value}",
+                message_id=message.id,
+            )
+
+    async def _handle_requirement_analysis_request(self, message: AgentMessage) -> None:
+        """Handle requirement analysis request messages."""
+        if "product_idea" in message.data:
+            result = await self.analyze_requirements(message.data["product_idea"])
+            
+            # Send response back
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.REQUIREMENT_ANALYSIS_RESPONSE,
+                data=result,
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_story_creation_request(self, message: AgentMessage) -> None:
+        """Handle story creation request messages."""
+        product_idea = message.data.get("product_idea", "")
+        clarifications = message.data.get("clarifications", {})
+        
+        stories = await self.create_user_stories(product_idea, clarifications)
+        
+        # Convert stories to serializable format
+        stories_data = [
+            {
+                "id": story.id,
+                "title": story.title,
+                "description": story.description,
+                "priority": story.priority,
+                "story_points": story.story_points,
+                "status": story.status,
+            }
+            for story in stories
+        ]
+        
+        response = AgentMessage(
+            id=str(uuid.uuid4()),
+            sender=self.role,
+            recipient=message.sender,
+            message_type=MessageType.STORY_CREATION_RESPONSE,
+            data={"stories": stories_data},
+            correlation_id=message.id,
+        )
+        await self.send_message(response)
+
+    async def _handle_backlog_prioritization_request(self, message: AgentMessage) -> None:
+        """Handle backlog prioritization request messages."""
+        # This would need story data from the message
+        if "stories" in message.data:
+            # Convert story data back to UserStory objects
+            stories = []
+            for story_data in message.data["stories"]:
+                story = UserStory(**story_data)
+                stories.append(story)
+            
+            prioritized_stories = await self.prioritize_backlog(stories)
+            
+            # Convert back to serializable format
+            prioritized_data = [
+                {
+                    "id": story.id,
+                    "title": story.title,
+                    "priority": story.priority,
+                    "story_points": story.story_points,
+                }
+                for story in prioritized_stories
+            ]
+            
+            response = AgentMessage(
+                id=str(uuid.uuid4()),
+                sender=self.role,
+                recipient=message.sender,
+                message_type=MessageType.BACKLOG_PRIORITIZATION_RESPONSE,
+                data={"prioritized_stories": prioritized_data},
+                correlation_id=message.id,
+            )
+            await self.send_message(response)
+
+    async def _handle_sprint_review_request(self, message: AgentMessage) -> None:
+        """Handle sprint review request messages."""
+        # This would need sprint and story data from the message
+        sprint_data = message.data.get("sprint", {})
+        completed_stories_data = message.data.get("completed_stories", [])
+        
+        # Convert data back to objects (simplified)
+        sprint = SprintModel(**sprint_data)
+        completed_stories = [UserStory(**story_data) for story_data in completed_stories_data]
+        
+        review_result = await self.review_sprint_deliverables(sprint, completed_stories)
+        
+        response = AgentMessage(
+            id=str(uuid.uuid4()),
+            sender=self.role,
+            recipient=message.sender,
+            message_type=MessageType.SPRINT_REVIEW_RESPONSE,
+            data=review_result,
+            correlation_id=message.id,
+        )
+        await self.send_message(response)
 
     async def analyze_requirements(self, product_idea: str) -> dict[str, Any]:
         """Analyze product requirements and ask clarifying questions."""
